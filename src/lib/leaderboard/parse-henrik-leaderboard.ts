@@ -67,6 +67,10 @@ export function parseHenrikLeaderboardV3(json: unknown): {
 
 /**
  * Henrik v1 (deprecated): `/valorant/v1/leaderboard/:region?page=&size=`
+ *
+ * Handles two shapes:
+ *   1. Wrapped:  { data: { leaderboard: [...], total: N } }
+ *   2. Flat:     { players: [...], total_players: N }   ← Henrik direct response
  */
 export function parseHenrikLeaderboardV1(json: unknown): {
   rows: LeaderboardRow[];
@@ -74,10 +78,35 @@ export function parseHenrikLeaderboardV1(json: unknown): {
 } | null {
   const root = asRecord(json);
   if (!root) return null;
+
+  // ── Resolve the player array ─────────────────────────────────────────────
+  let board: unknown[] | null = null;
+  let totalHint: number | null = null;
+
+  // Shape 1: wrapped in .data.leaderboard
   const data = asRecord(root.data);
-  if (!data) return null;
-  const board = data.leaderboard;
-  if (!Array.isArray(board)) return null;
+  if (data && Array.isArray(data.leaderboard)) {
+    board = data.leaderboard;
+    totalHint =
+      typeof data.total === "number"
+        ? data.total
+        : typeof data.total_players === "number"
+          ? data.total_players
+          : null;
+  }
+
+  // Shape 2: flat root.players (Henrik direct leaderboard response)
+  if (!board && Array.isArray(root.players)) {
+    board = root.players;
+    totalHint =
+      typeof root.total_players === "number"
+        ? root.total_players
+        : typeof root.total === "number"
+          ? root.total
+          : null;
+  }
+
+  if (!board) return null;
 
   const rows: LeaderboardRow[] = [];
   for (const p of board) {
@@ -127,12 +156,7 @@ export function parseHenrikLeaderboardV1(json: unknown): {
     });
   }
 
-  const total =
-    typeof data.total === "number"
-      ? data.total
-      : typeof data.total_players === "number"
-        ? data.total_players
-        : rows.length;
+  const total = totalHint ?? rows.length;
 
   return { rows, total: Number.isFinite(total) ? total : rows.length };
 }

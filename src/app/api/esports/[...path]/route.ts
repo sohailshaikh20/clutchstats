@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const VLR_BASE_URL = 'https://vlrggapi.vercel.app';
+// vlrggapi.vercel.app is permanently down (DEPLOYMENT_DISABLED).
+// vlr.orlandomm.net/api/v1 is the maintained replacement.
+const VLR_BASE_URL = 'https://vlr.orlandomm.net/api/v1';
 
 // ─── In-Memory Cache ──────────────────────────────────────────────────────────
 
@@ -40,15 +42,54 @@ function evictExpired(): void {
   });
 }
 
+// ─── Path Rewriter ────────────────────────────────────────────────────────────
+// Maps legacy vlrggapi-style paths to vlr.orlandomm.net/api/v1 paths.
+
+function rewriteVlrPath(
+  path: string,
+  params: URLSearchParams
+): { path: string; rewrittenSearch: string } {
+  // /match  →  depends on ?q= param
+  if (path === '/match' || path.startsWith('/match?')) {
+    const q = params.get('q') ?? '';
+    const page = params.get('page');
+
+    if (q === 'results') {
+      const ps = page ? `?page=${page}` : '';
+      return { path: '/results', rewrittenSearch: ps };
+    }
+    // live_score and upcoming both map to /matches in the new API;
+    // the component separates them by the status field in the response.
+    return { path: '/matches', rewrittenSearch: '' };
+  }
+
+  // /match/:id  →  no per-match detail endpoint in new API; return empty
+  if (path.startsWith('/match/')) {
+    return { path: '/__no_match_detail__', rewrittenSearch: '' };
+  }
+
+  // /rankings, /events, /news  →  pass through (same paths in new API)
+  const forwarded = new URLSearchParams();
+  params.forEach((v, k) => { if (k !== 'q') forwarded.set(k, v); });
+  const qs = forwarded.size ? `?${forwarded.toString()}` : '';
+  return { path, rewrittenSearch: qs };
+}
+
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { path: string[] } }
 ) {
-  const path = '/' + params.path.join('/');
+  const rawPath = '/' + params.path.join('/');
   const search = request.nextUrl.search;
-  const cacheKey = `${path}${search}`;
+
+  // ── Rewrite old vlrggapi path style → vlr.orlandomm.net style ────────────
+  // Components still call /match?q=results, /match?q=live_score, etc.
+  // New API uses /results, /matches, /events, /rankings directly.
+  const { path, rewrittenSearch } = rewriteVlrPath(rawPath, request.nextUrl.searchParams);
+
+  const cacheKey = `${path}${rewrittenSearch}`;
 
   // Probabilistic cache sweep — keeps memory usage bounded without a timer
   if (Math.random() < 0.05) evictExpired();
@@ -66,7 +107,7 @@ export async function GET(
   }
 
   // ── Proxy to VLR API ──
-  const upstreamUrl = `${VLR_BASE_URL}${path}${search}`;
+  const upstreamUrl = `${VLR_BASE_URL}${path}${rewrittenSearch}`;
 
   try {
     const upstream = await fetch(upstreamUrl, {

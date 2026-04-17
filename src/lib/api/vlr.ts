@@ -8,7 +8,7 @@ import {
   VLRRegion,
 } from '@/types/esports';
 
-const VLR_BASE_URL = 'https://vlrggapi.vercel.app';
+const VLR_BASE_URL = 'https://vlr.orlandomm.net/api/v1';
 
 // ─── Error ────────────────────────────────────────────────────────────────────
 

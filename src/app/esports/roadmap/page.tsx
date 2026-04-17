@@ -18,10 +18,25 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function CareerRoadmapPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let riotLinked = false;
+  let currentHenrikRank: number | null = null;
+
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("riot_puuid, riot_name, riot_tag, current_rank")
+        .eq("id", user.id)
+        .maybeSingle();
+      riotLinked = Boolean(profile?.riot_puuid && profile?.riot_name && profile?.riot_tag);
+      currentHenrikRank =
+        typeof profile?.current_rank === "number" ? profile.current_rank : null;
+    }
+  } catch {
+    // Supabase env vars not configured or user unauthenticated — continue as guest
+  }
 
   let rankGroups: RoadmapRankGroup[] = [];
   const agentsMin: { displayName: string; displayIcon: string }[] = [];
@@ -38,19 +53,6 @@ export default async function CareerRoadmapPage() {
   } catch (err) {
     console.error("[career-roadmap] failed to load Valorant assets", err);
     rankGroups = [];
-  }
-
-  let riotLinked = false;
-  let currentHenrikRank: number | null = null;
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("riot_puuid, riot_name, riot_tag, current_rank")
-      .eq("id", user.id)
-      .maybeSingle();
-    riotLinked = Boolean(profile?.riot_puuid && profile?.riot_name && profile?.riot_tag);
-    currentHenrikRank =
-      typeof profile?.current_rank === "number" ? profile.current_rank : null;
   }
 
   const userRankGroupKey = resolveUserRankGroupKey(riotLinked, currentHenrikRank, rankGroups);

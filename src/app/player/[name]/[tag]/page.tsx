@@ -141,6 +141,7 @@ export default async function PlayerProfilePage({
     );
   } catch (e) {
     if (e instanceof HenrikApiError) {
+      console.error(`[PlayerProfilePage] HenrikApiError status=${e.status} name=${name} tag=${tag}:`, e.message);
       if (isPrivacyHenrikError(e.message, e.status)) {
         return <PlayerPrivacy />;
       }
@@ -149,6 +150,7 @@ export default async function PlayerProfilePage({
       }
       return <ProfileErrorGeneric message={e.message} />;
     }
+    console.error(`[PlayerProfilePage] Unexpected error for ${name}#${tag}:`, e);
     return (
       <ProfileErrorGeneric
         message={e instanceof Error ? e.message : "Something went wrong."}
