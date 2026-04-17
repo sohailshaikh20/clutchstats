@@ -20,6 +20,7 @@ import {
   type AgentIcon,
 } from "@/lib/valorant/landing-assets";
 import { getRankByTier } from "@/lib/constants/ranks";
+import type { LeaderboardRow } from "@/lib/leaderboard/parse-henrik-leaderboard";
 import type { EsportsMatchCardDTO } from "@/types/esports";
 
 // Active players verified against Henrik API (leaderboard top players, April 2026)
@@ -37,17 +38,17 @@ function playerHref(riotId: string): string {
 const REMOTE_IMG_BLUR =
   "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAIAAgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwABmQ/9k=";
 
-const MOCK_LEADERBOARD: { name: string; rr: number; tier: number }[] = [
-  { name: "stellar", rr: 612, tier: 25 },
-  { name: "bang", rr: 524, tier: 25 },
-  { name: "Asuna", rr: 498, tier: 24 },
-  { name: "Derrek", rr: 455, tier: 24 },
-  { name: "Ethan", rr: 431, tier: 24 },
-  { name: "BcJ", rr: 402, tier: 23 },
-  { name: "johnqt", rr: 388, tier: 23 },
-  { name: "NaturE", rr: 371, tier: 23 },
-  { name: "OXY", rr: 355, tier: 22 },
-  { name: "seven", rr: 340, tier: 22 },
+const FALLBACK_LEADERBOARD: LeaderboardRow[] = [
+  { leaderboardRank: 1, name: "stellar", tag: "NA1", rr: 612, tier: 25, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 2, name: "bang", tag: "100", rr: 524, tier: 25, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 3, name: "Asuna", tag: "1337", rr: 498, tier: 24, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 4, name: "Derrek", tag: "deer", rr: 455, tier: 24, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 5, name: "Ethan", tag: "100T", rr: 431, tier: 24, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 6, name: "BcJ", tag: "NV", rr: 402, tier: 23, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 7, name: "johnqt", tag: "NA1", rr: 388, tier: 23, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 8, name: "NaturE", tag: "100T", rr: 371, tier: 23, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 9, name: "OXY", tag: "OXY", rr: 355, tier: 22, wins: 0, topAgentUuid: null },
+  { leaderboardRank: 10, name: "seven", tag: "77", rr: 340, tier: 22, wins: 0, topAgentUuid: null },
 ];
 
 const featureCards = [
@@ -110,6 +111,8 @@ export default function HomeLanding() {
   const [matchesErr, setMatchesErr] = useState(false);
   const [rankIcons, setRankIcons] = useState<Map<number, string>>(new Map());
   const [agents, setAgents] = useState<AgentIcon[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>(FALLBACK_LEADERBOARD);
+  const [leaderboardSource, setLeaderboardSource] = useState<"live" | "fallback">("fallback");
 
   useEffect(() => {
     let cancelled = false;
@@ -123,6 +126,26 @@ export default function HomeLanding() {
         setAgents(
           [...ag].sort((a, b) => a.displayName.localeCompare(b.displayName))
         );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/leaderboard/preview");
+        if (!res.ok) return;
+        const json = (await res.json()) as { rows?: LeaderboardRow[]; source?: string };
+        if (!cancelled && json.rows && json.rows.length > 0) {
+          setLeaderboard(json.rows);
+          setLeaderboardSource("live");
+        }
+      } catch {
+        // keep fallback data
       }
     })();
     return () => {
@@ -572,9 +595,11 @@ export default function HomeLanding() {
             >
               TOP PLAYERS THIS ACT
             </motion.h2>
-            <span className="rounded border border-white/10 bg-surface px-1.5 py-0.5 font-heading text-[10px] font-semibold uppercase tracking-wide text-text-secondary/60">
-              Sample data
-            </span>
+            {leaderboardSource === "fallback" && (
+              <span className="rounded border border-white/10 bg-surface px-1.5 py-0.5 font-heading text-[10px] font-semibold uppercase tracking-wide text-text-secondary/60">
+                Sample data
+              </span>
+            )}
           </div>
 
           <motion.div
@@ -588,13 +613,13 @@ export default function HomeLanding() {
             }
             className="mt-10 overflow-hidden rounded-xl border border-surface-light bg-surface"
           >
-            {MOCK_LEADERBOARD.map((row, idx) => {
-              const pos = idx + 1;
+            {leaderboard.map((row, idx) => {
+              const pos = row.leaderboardRank || idx + 1;
               const iconUrl = rankIcons.get(row.tier);
               const rankMeta = getRankByTier(row.tier);
               return (
                 <motion.div
-                  key={row.name}
+                  key={`${row.name}-${row.tag}-${pos}`}
                   variants={
                     reduced
                       ? {
@@ -617,6 +642,7 @@ export default function HomeLanding() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-heading text-sm font-semibold text-text-primary">
                       {row.name}
+                      {row.tag ? <span className="ml-1 text-text-secondary/60">#{row.tag}</span> : null}
                     </p>
                     <p className="text-xs text-text-secondary">{rankMeta.name}</p>
                   </div>

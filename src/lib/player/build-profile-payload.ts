@@ -24,6 +24,9 @@ export type MatchRow = {
   mapSplash: string;
   agentName: string;
   agentIcon: string;
+  agentRoleIcon: string;
+  /** CSS rgba for ring around agent portrait */
+  agentRoleRing: string;
   queueLabel: string;
   filterQueue: "competitive" | "unrated" | "other";
   won: boolean;
@@ -34,6 +37,10 @@ export type MatchRow = {
   assists: number;
   kd: number;
   combatScore: number;
+  /** Headshot % for this match (0-100). null when not tracked (e.g. deathmatch). */
+  headshotPct: number | null;
+  /** Damage dealt per round. null when not tracked. */
+  damagePerRound: number | null;
   gameStart: number;
 };
 
@@ -99,12 +106,23 @@ const REGION_FLAGS: Record<string, string> = {
   br: "🇧🇷",
 };
 
-function classifyQueue(queue: string): "competitive" | "unrated" | "other" {
-  const q = (queue || "").toLowerCase();
-  if (q === "competitive" || q.includes("competitive")) return "competitive";
-  if (q === "unrated" || q.includes("unrated") || q.includes("swiftplay"))
-    return "unrated";
+function classifyQueue(queue: string, mode: string): "competitive" | "unrated" | "other" {
+  const q = `${queue || ""} ${mode || ""}`.toLowerCase();
+  if (q.includes("competitive") || q.includes("ranked") || q.includes("premier")) {
+    return "competitive";
+  }
+  if (q.includes("unrated") || q.includes("swiftplay")) return "unrated";
   return "other";
+}
+
+/** Ring colour for agent portrait (Valorant role colours). */
+export function roleAccentRingColor(roleDisplayName: string): string {
+  const r = roleDisplayName.trim().toLowerCase();
+  if (r === "duelist") return "rgba(255, 70, 85, 0.95)";
+  if (r === "initiator") return "rgba(31, 170, 237, 0.95)";
+  if (r === "controller") return "rgba(180, 124, 237, 0.95)";
+  if (r === "sentinel") return "rgba(74, 227, 167, 0.95)";
+  return "rgba(118, 134, 145, 0.75)";
 }
 
 function queueLabel(queue: string, mode: string): string {
@@ -162,6 +180,7 @@ export function buildPlayerProfilePayload(
   let deaths = 0;
   let headshots = 0;
   let shots = 0;
+  // ACS = score / rounds_played per match, averaged across ranked matches only
   let acsSum = 0;
   let acsCount = 0;
 
@@ -178,27 +197,41 @@ export function buildPlayerProfilePayload(
     const player = getPlayerFromMatch(match, puuid);
     if (!player) continue;
 
+    const mode = (match.metadata.mode ?? "").toLowerCase();
+    const isDeathmatch = mode.includes("deathmatch");
+    const rounds = Math.max(match.metadata.rounds_played ?? 0, 1);
+
+    // Team / win determination — only valid for non-deathmatch modes
     const teamKey = player.team.toLowerCase() as "red" | "blue";
-    const team = match.teams[teamKey];
-    const won = team?.has_won ?? false;
+    const team = isDeathmatch ? undefined : match.teams?.[teamKey];
     const teamRounds = team?.rounds_won ?? 0;
     const oppRounds = team?.rounds_lost ?? 0;
-    const rounds = match.metadata.rounds_played || 1;
+    const won = !isDeathmatch && teamRounds > oppRounds;
 
-    const fq = classifyQueue(match.metadata.queue);
-    const useForStats = fq === "competitive" || fq === "unrated";
-    const acs = rounds > 0 ? player.stats.score / rounds : 0;
+    const fq = classifyQueue(match.metadata.queue, match.metadata.mode);
+    // ACS = combat score / rounds (only meaningful in ranked/unrated, not deathmatch)
+    const acs = !isDeathmatch && rounds > 0 ? (player.stats.score ?? 0) / rounds : 0;
 
-    if (useForStats) {
+    // ── Aggregate headline stats ──────────────────────────────────────────────
+    // K/D: count all modes (deathmatch K/D is still valid for mechanical tracking)
+    kills += player.stats.kills ?? 0;
+    deaths += player.stats.deaths ?? 0;
+
+    // Win rate, HS%, ACS: only count ranked/unrated (deathmatch skews all three)
+    if (!isDeathmatch) {
       if (won) wins += 1;
       else losses += 1;
-      kills += player.stats.kills;
-      deaths += player.stats.deaths;
-      headshots += player.stats.headshots;
-      shots +=
-        player.stats.headshots + player.stats.bodyshots + player.stats.legshots;
 
-      if (rounds > 0) {
+      const pHS = player.stats.headshots ?? 0;
+      const pBS = player.stats.bodyshots ?? 0;
+      const pLS = player.stats.legshots ?? 0;
+      const pShots = pHS + pBS + pLS;
+      // Only accumulate shot data when Henrik actually tracked it (shots > 0)
+      if (pShots > 0) {
+        headshots += pHS;
+        shots += pShots;
+      }
+      if (acs > 0) {
         acsSum += acs;
         acsCount += 1;
       }
@@ -212,16 +245,26 @@ export function buildPlayerProfilePayload(
     );
 
     const agentName = agentAsset?.displayName ?? player.character;
-    const agentIcon =
-      agentAsset?.displayIcon ?? player.assets?.agent?.small ?? "";
+    const agentIcon = agentAsset?.displayIcon ?? player.assets?.agent?.small ?? "";
 
     const mapSplash = mapAsset?.splash ?? "";
     const mapName = mapAsset?.displayName ?? match.metadata.map;
 
     const kd =
-      player.stats.deaths > 0
-        ? player.stats.kills / player.stats.deaths
-        : player.stats.kills;
+      (player.stats.deaths ?? 0) > 0
+        ? (player.stats.kills ?? 0) / (player.stats.deaths ?? 1)
+        : (player.stats.kills ?? 0);
+
+    // Per-match HS% and damage/round (null when not tracked)
+    const matchHS = player.stats.headshots ?? 0;
+    const matchBS = player.stats.bodyshots ?? 0;
+    const matchLS = player.stats.legshots ?? 0;
+    const matchShots = matchHS + matchBS + matchLS;
+    const matchHeadshotPct = matchShots > 0 ? (matchHS / matchShots) * 100 : null;
+    const matchDamage = player.damage_made ?? 0;
+    const damagePerRound = !isDeathmatch && rounds > 0 && matchDamage > 0
+      ? matchDamage / rounds
+      : null;
 
     matchRows.push({
       matchId: match.metadata.matchid,
@@ -229,20 +272,25 @@ export function buildPlayerProfilePayload(
       mapSplash,
       agentName,
       agentIcon,
+      agentRoleIcon: agentAsset?.roleIcon ?? "",
+      agentRoleRing: roleAccentRingColor(agentAsset?.roleDisplayName ?? ""),
       queueLabel: queueLabel(match.metadata.queue, match.metadata.mode),
       filterQueue: fq,
       won,
       teamRounds,
       oppRounds,
-      kills: player.stats.kills,
-      deaths: player.stats.deaths,
-      assists: player.stats.assists,
+      kills: player.stats.kills ?? 0,
+      deaths: player.stats.deaths ?? 0,
+      assists: player.stats.assists ?? 0,
       kd,
       combatScore: acs,
+      headshotPct: matchHeadshotPct,
+      damagePerRound,
       gameStart: match.metadata.game_start,
     });
 
-    if (useForStats) {
+    // Agent aggregate (only non-deathmatch for meaningful win rates)
+    if (!isDeathmatch) {
       const aKey = agentName;
       const prevA = agentAgg.get(aKey) ?? {
         games: 0,
@@ -253,8 +301,8 @@ export function buildPlayerProfilePayload(
       };
       prevA.games += 1;
       if (won) prevA.wins += 1;
-      prevA.kills += player.stats.kills;
-      prevA.deaths += player.stats.deaths;
+      prevA.kills += player.stats.kills ?? 0;
+      prevA.deaths += player.stats.deaths ?? 0;
       prevA.asset = prevA.asset ?? agentAsset;
       agentAgg.set(aKey, prevA);
 
@@ -271,6 +319,7 @@ export function buildPlayerProfilePayload(
   const kdRatio = deaths > 0 ? kills / deaths : kills;
   const winRate = totalRanked > 0 ? (wins / totalRanked) * 100 : 0;
   const headshotPct = shots > 0 ? (headshots / shots) * 100 : 0;
+  // ACS = average (score / rounds) across ranked/unrated matches
   const avgCombatScore = acsCount > 0 ? acsSum / acsCount : 0;
 
   const agents: AgentStatRow[] = Array.from(agentAgg.entries())

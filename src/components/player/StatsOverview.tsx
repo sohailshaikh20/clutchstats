@@ -1,6 +1,6 @@
 "use client";
 
-import { animate } from "framer-motion";
+import { animate, motion } from "framer-motion";
 import { Crosshair } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -57,7 +57,7 @@ function WinRateRing({ pct }: { pct: number }) {
           fill="none"
           stroke="currentColor"
           strokeWidth="8"
-          className="text-surface-lighter"
+          className="text-surface-light"
         />
         <circle
           cx="50"
@@ -69,15 +69,24 @@ function WinRateRing({ pct }: { pct: number }) {
           strokeDasharray={c}
           strokeDashoffset={dash}
           strokeLinecap="round"
-          className="text-accent-red"
+          className="text-win"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center font-heading text-2xl font-bold text-text-primary">
+      <span className="absolute inset-0 flex items-center justify-center font-heading text-3xl font-bold tabular-nums text-text-primary">
         {Math.round(label)}%
       </span>
     </div>
   );
 }
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
+  }),
+};
 
 export function StatsOverview({
   kdRatio,
@@ -106,7 +115,11 @@ export function StatsOverview({
     {
       key: "kd",
       label: "KD ratio",
-      node: <span className={`font-heading text-3xl font-bold ${kdColor}`}>{kdDisplay}</span>,
+      node: (
+        <span className={`font-heading text-4xl font-bold tabular-nums ${kdColor}`}>
+          {kdDisplay}
+        </span>
+      ),
     },
     {
       key: "wr",
@@ -118,8 +131,8 @@ export function StatsOverview({
       label: "Headshot %",
       node: (
         <div className="flex items-center justify-center gap-2">
-          <Crosshair className="size-7 text-text-secondary" aria-hidden />
-          <span className="font-heading text-3xl font-bold text-text-primary">
+          <Crosshair className="size-8 text-text-secondary" aria-hidden />
+          <span className="font-heading text-4xl font-bold tabular-nums text-text-primary">
             {hsDisplay}
           </span>
         </div>
@@ -129,7 +142,7 @@ export function StatsOverview({
       key: "acs",
       label: "Avg combat score",
       node: (
-        <span className="font-heading text-3xl font-bold text-text-primary">
+        <span className="font-heading text-4xl font-bold tabular-nums text-text-primary">
           {acsDisplay}
         </span>
       ),
@@ -137,18 +150,31 @@ export function StatsOverview({
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((c) => (
-        <div
+    <motion.div
+      initial="hidden"
+      animate="show"
+      variants={{
+        hidden: {},
+        show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
+      }}
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+    >
+      {cards.map((c, i) => (
+        <motion.div
           key={c.key}
-          className="rounded-xl border border-surface-light bg-surface p-4 text-center transition-[border-color,box-shadow] hover:border-white/15 hover:shadow-glow-red/20"
+          custom={i}
+          variants={cardVariants}
+          whileHover={{ y: -2, transition: { duration: 0.2 } }}
+          className="rounded-xl bg-gradient-to-br from-surface-light/70 via-surface-light/20 to-transparent p-px transition-shadow hover:shadow-lg hover:shadow-black/20"
         >
-          <div className="min-h-[3.5rem]">{c.node}</div>
-          <p className="mt-3 font-body text-xs font-medium uppercase tracking-wider text-text-secondary">
-            {c.label}
-          </p>
-        </div>
+          <div className="flex h-full flex-col rounded-[11px] bg-surface px-4 py-5 text-center transition-[border-color] hover:border-white/10">
+            <div className="flex min-h-[4.5rem] items-center justify-center">{c.node}</div>
+            <p className="mt-3 font-body text-xs font-medium uppercase tracking-wider text-text-secondary">
+              {c.label}
+            </p>
+          </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

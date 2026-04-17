@@ -44,7 +44,7 @@ function evictExpired(): void {
 function rewriteVlrPath(
   path: string,
   params: URLSearchParams
-): { path: string; rewrittenSearch: string } {
+): { path: string; rewrittenSearch: string; statusFilter?: 'live' | 'upcoming' | null } {
   if (path === '/match' || path.startsWith('/match?')) {
     const q = params.get('q') ?? '';
     const page = params.get('page');
@@ -52,7 +52,9 @@ function rewriteVlrPath(
       const ps = page ? `?page=${page}` : '';
       return { path: '/results', rewrittenSearch: ps };
     }
-    return { path: '/matches', rewrittenSearch: '' };
+    // Both live_score and upcoming map to /matches; filter by status field afterward
+    const statusFilter = q === 'live_score' ? 'live' : q === 'upcoming' ? 'upcoming' : null;
+    return { path: '/matches', rewrittenSearch: '', statusFilter };
   }
 
   if (path.startsWith('/match/')) {
@@ -210,7 +212,7 @@ export async function GET(
 ) {
   const rawPath = '/' + params.path.join('/');
 
-  const { path, rewrittenSearch } = rewriteVlrPath(rawPath, request.nextUrl.searchParams);
+  const { path, rewrittenSearch, statusFilter } = rewriteVlrPath(rawPath, request.nextUrl.searchParams);
 
   // Short-circuit for paths with no upstream endpoint
   if (path === '/__no_match_detail__') {
@@ -255,7 +257,18 @@ export async function GET(
     }
 
     const raw = await upstream.json();
-    const data = normalizeVlrResponse(path, raw);
+    let data = normalizeVlrResponse(path, raw);
+
+    // Filter live vs upcoming when both come from the same /matches endpoint
+    if (statusFilter && data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).data)) {
+      const obj = data as Record<string, unknown>;
+      obj.data = (obj.data as unknown[]).filter((item) => {
+        const m = item as Record<string, unknown>;
+        return m.status === statusFilter;
+      });
+      data = obj;
+    }
+
     const ttl = getTTL(path);
 
     cache.set(cacheKey, { data, status: 200, expiresAt: Date.now() + ttl });

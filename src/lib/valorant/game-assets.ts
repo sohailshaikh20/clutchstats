@@ -12,6 +12,8 @@ export type AgentAsset = {
   displayIcon: string;
   fullPortraitV2: string;
   roleIcon: string;
+  /** e.g. Duelist, Controller — used for role-coloured UI rings */
+  roleDisplayName: string;
 };
 
 export type TierAsset = {
@@ -82,7 +84,7 @@ export async function fetchValorantGameAssets(): Promise<{
         displayName: string;
         displayIcon: string;
         fullPortraitV2: string;
-        role: { displayIcon: string };
+        role: { displayIcon: string; displayName?: string };
       }>;
     };
     for (const a of j.data ?? []) {
@@ -92,6 +94,7 @@ export async function fetchValorantGameAssets(): Promise<{
         displayIcon: a.displayIcon,
         fullPortraitV2: a.fullPortraitV2,
         roleIcon: a.role?.displayIcon ?? "",
+        roleDisplayName: a.role?.displayName ?? "",
       };
       agentsByUuid.set(a.uuid.toLowerCase(), asset);
       agentsByName.set(normalizeKey(a.displayName), asset);
