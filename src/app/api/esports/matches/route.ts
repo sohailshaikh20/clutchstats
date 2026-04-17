@@ -1,87 +1,48 @@
-import { NextResponse } from "next/server";
-import { getVLRClient } from "@/lib/api/vlr";
-import type { EsportsMatchCardDTO, VLRMatch } from "@/types/esports";
+import { NextResponse } from 'next/server';
+import type { EsportsMatchCardDTO } from '@/types/esports';
 
-function toCard(m: VLRMatch, isLive: boolean): EsportsMatchCardDTO {
-  const timeLabel = isLive
-    ? "LIVE"
-    : m.time_until_match ||
-      (m.unix_timestamp
-        ? new Date(m.unix_timestamp * 1000).toLocaleString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "TBD");
-
-  const vlrUrl =
-    m.url ||
-    (m.match_page?.startsWith("http")
-      ? m.match_page
-      : m.match_page
-        ? `https://www.vlr.gg${m.match_page}`
-        : "https://www.vlr.gg");
-
-  return {
-    id: m.id,
-    team1: {
-      name: m.team1.name,
-      logo: m.team1.logo,
-      score: m.team1.score,
-    },
-    team2: {
-      name: m.team2.name,
-      logo: m.team2.logo,
-      score: m.team2.score,
-    },
-    eventName: m.event?.name ?? m.series?.name ?? "Tournament",
-    isLive,
-    timeLabel,
-    unixTimestamp: m.unix_timestamp,
-    vlrUrl,
-  };
-}
+const VLR_MATCHES_URL = 'https://vlr.orlandomm.net/api/v1/matches';
 
 export async function GET() {
-  const vlr = getVLRClient();
+  try {
+    const res = await fetch(VLR_MATCHES_URL, {
+      headers: { 'Content-Type': 'application/json' },
+      next: { revalidate: 30 },
+    });
 
-  const [liveRes, upcomingRes] = await Promise.allSettled([
-    vlr.getLiveMatches(),
-    vlr.getUpcomingMatches(),
-  ]);
-
-  const live: VLRMatch[] =
-    liveRes.status === "fulfilled" && Array.isArray(liveRes.value.data)
-      ? liveRes.value.data
-      : [];
-
-  const upcoming: VLRMatch[] =
-    upcomingRes.status === "fulfilled" && Array.isArray(upcomingRes.value.data)
-      ? upcomingRes.value.data
-      : [];
-
-  const seen = new Set<string>();
-  const cards: EsportsMatchCardDTO[] = [];
-
-  for (const m of live) {
-    if (seen.has(m.id)) continue;
-    seen.add(m.id);
-    cards.push(toCard(m, true));
-  }
-
-  for (const m of upcoming) {
-    if (seen.has(m.id)) continue;
-    seen.add(m.id);
-    cards.push(toCard(m, false));
-  }
-
-  return NextResponse.json(
-    { matches: cards },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-      },
+    if (!res.ok) {
+      return NextResponse.json({ matches: [] }, { status: 200 });
     }
-  );
+
+    const json = (await res.json()) as { data?: unknown[] };
+    const raw = Array.isArray(json.data) ? json.data : [];
+
+    const matches: EsportsMatchCardDTO[] = raw.slice(0, 12).map((item) => {
+      const m = item as Record<string, unknown>;
+      const teams = Array.isArray(m.teams)
+        ? (m.teams as Array<Record<string, unknown>>)
+        : [];
+      const t1 = teams[0] ?? {};
+      const t2 = teams[1] ?? {};
+      const statusRaw = String(m.status ?? '').toUpperCase();
+      const isLive = statusRaw === 'LIVE';
+      const score1 = t1.score != null && t1.score !== '' ? Number(t1.score) : null;
+      const score2 = t2.score != null && t2.score !== '' ? Number(t2.score) : null;
+      return {
+        id: String(m.id ?? ''),
+        team1: { name: String(t1.name ?? ''), logo: '', score: score1 },
+        team2: { name: String(t2.name ?? ''), logo: '', score: score2 },
+        eventName: String(m.tournament ?? m.event ?? ''),
+        isLive,
+        timeLabel: isLive ? 'LIVE' : String(m.in ?? ''),
+        unixTimestamp: m.timestamp ? Number(m.timestamp) : null,
+        vlrUrl: m.id ? `https://www.vlr.gg/${m.id}` : 'https://www.vlr.gg',
+      };
+    });
+
+    return NextResponse.json({ matches });
+  } catch (err) {
+    console.error('[esports/matches] fetch failed:', err);
+    return NextResponse.json({ matches: [] }, { status: 200 });
+  }
 }

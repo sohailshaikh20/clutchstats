@@ -14,23 +14,20 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-/** Per-path TTL rules (milliseconds). Evaluated against full path+querystring. */
+/** Per-path TTL rules (milliseconds). Evaluated against rewritten path. */
 const TTL_RULES: Array<{ pattern: RegExp; ttl: number }> = [
-  { pattern: /\/match.*q=live/,     ttl: 30_000 },      // 30 s — live scores
-  { pattern: /\/match.*q=upcoming/, ttl: 60_000 },      // 1 min — schedule
-  { pattern: /\/match.*q=results/,  ttl: 300_000 },     // 5 min — past results
-  { pattern: /\/match\/[^/?]+$/,    ttl: 3_600_000 },   // 1 h — match detail
-  { pattern: /\/rankings/,          ttl: 3_600_000 },   // 1 h — rankings
-  { pattern: /\/events/,            ttl: 300_000 },     // 5 min — events list
-  { pattern: /\/news/,              ttl: 600_000 },     // 10 min — news feed
+  { pattern: /^\/matches$/,   ttl: 30_000 },    // 30 s — live + upcoming
+  { pattern: /^\/results/,    ttl: 300_000 },   // 5 min — past results
+  { pattern: /^\/rankings/,   ttl: 3_600_000 }, // 1 h — rankings
+  { pattern: /^\/events/,     ttl: 300_000 },   // 5 min — events list
+  { pattern: /^\/news/,       ttl: 600_000 },   // 10 min — news feed
 ];
 
-const DEFAULT_TTL = 120_000; // 2 min fallback
+const DEFAULT_TTL = 120_000;
 
-function getTTL(path: string, search: string): number {
-  const full = `${path}${search}`;
+function getTTL(path: string): number {
   for (const rule of TTL_RULES) {
-    if (rule.pattern.test(full)) return rule.ttl;
+    if (rule.pattern.test(path)) return rule.ttl;
   }
   return DEFAULT_TTL;
 }
@@ -43,36 +40,166 @@ function evictExpired(): void {
 }
 
 // ─── Path Rewriter ────────────────────────────────────────────────────────────
-// Maps legacy vlrggapi-style paths to vlr.orlandomm.net/api/v1 paths.
 
 function rewriteVlrPath(
   path: string,
   params: URLSearchParams
 ): { path: string; rewrittenSearch: string } {
-  // /match  →  depends on ?q= param
   if (path === '/match' || path.startsWith('/match?')) {
     const q = params.get('q') ?? '';
     const page = params.get('page');
-
     if (q === 'results') {
       const ps = page ? `?page=${page}` : '';
       return { path: '/results', rewrittenSearch: ps };
     }
-    // live_score and upcoming both map to /matches in the new API;
-    // the component separates them by the status field in the response.
     return { path: '/matches', rewrittenSearch: '' };
   }
 
-  // /match/:id  →  no per-match detail endpoint in new API; return empty
   if (path.startsWith('/match/')) {
     return { path: '/__no_match_detail__', rewrittenSearch: '' };
   }
 
-  // /rankings, /events, /news  →  pass through (same paths in new API)
   const forwarded = new URLSearchParams();
   params.forEach((v, k) => { if (k !== 'q') forwarded.set(k, v); });
   const qs = forwarded.size ? `?${forwarded.toString()}` : '';
   return { path, rewrittenSearch: qs };
+}
+
+// ─── VLR Response Normalizers ─────────────────────────────────────────────────
+// The vlr.orlandomm.net API uses a different shape than what our components
+// expect (built for the old vlrggapi format). We normalize here so components
+// need no changes.
+
+type RawTeam = { name?: unknown; score?: unknown; country?: unknown; won?: unknown };
+
+function safeStr(v: unknown): string {
+  return typeof v === 'string' ? v : String(v ?? '');
+}
+
+function safeScore(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** /matches → VLRMatch shape the components expect */
+function normalizeMatch(raw: unknown): unknown {
+  const m = raw as Record<string, unknown>;
+  const teams = Array.isArray(m.teams) ? (m.teams as RawTeam[]) : [];
+  const t1 = teams[0] ?? {};
+  const t2 = teams[1] ?? {};
+  const statusRaw = safeStr(m.status).toUpperCase();
+
+  return {
+    id: safeStr(m.id),
+    url: '',
+    match_page: '',
+    team1: {
+      name: safeStr(t1.name),
+      logo: '',
+      score: safeScore(t1.score),
+      record: '',
+    },
+    team2: {
+      name: safeStr(t2.name),
+      logo: '',
+      score: safeScore(t2.score),
+      record: '',
+    },
+    event: {
+      name: safeStr(m.tournament ?? m.event),
+      logo: safeStr(m.img),
+    },
+    series: {
+      name: safeStr(m.event),
+      full_name: safeStr(m.event),
+    },
+    time_until_match: safeStr(m.in),
+    unix_timestamp: m.timestamp ? Number(m.timestamp) : null,
+    status: statusRaw === 'LIVE' ? 'live' : statusRaw === 'COMPLETED' ? 'completed' : 'upcoming',
+  };
+}
+
+/** /results → VLRResult shape */
+function normalizeResult(raw: unknown): unknown {
+  const m = raw as Record<string, unknown>;
+  const teams = Array.isArray(m.teams) ? (m.teams as RawTeam[]) : [];
+  const t1 = teams[0] ?? {};
+  const t2 = teams[1] ?? {};
+  const winner = t1.won ? safeStr(t1.name) : t2.won ? safeStr(t2.name) : '';
+
+  return {
+    id: safeStr(m.id),
+    url: '',
+    match_page: '',
+    team1: {
+      name: safeStr(t1.name),
+      logo: '',
+      score: Number(t1.score ?? 0),
+      record: '',
+    },
+    team2: {
+      name: safeStr(t2.name),
+      logo: '',
+      score: Number(t2.score ?? 0),
+      record: '',
+    },
+    event: {
+      name: safeStr(m.tournament ?? m.event),
+      logo: safeStr(m.img),
+    },
+    series: {
+      name: safeStr(m.event),
+      full_name: safeStr(m.event),
+    },
+    time_completed: safeStr(m.ago),
+    unix_timestamp: m.timestamp ? Number(m.timestamp) : 0,
+    status: 'completed',
+    winner,
+  };
+}
+
+/** /events → VLREvent shape */
+function normalizeEvent(raw: unknown): unknown {
+  const e = raw as Record<string, unknown>;
+  return {
+    id: safeStr(e.id),
+    title: safeStr(e.name),
+    status: safeStr(e.status) || 'upcoming',
+    prizepool: e.prizepool != null ? safeStr(e.prizepool) || null : null,
+    dates: safeStr(e.dates),
+    country: safeStr(e.country),
+    region: '',
+    logo: safeStr(e.img),
+    url: '',
+  };
+}
+
+/**
+ * Normalizes the raw VLR API response so it matches the shape that our
+ * components were written for (based on old vlrggapi format).
+ */
+function normalizeVlrResponse(path: string, raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') return raw;
+  const obj = raw as Record<string, unknown>;
+
+  // Wrap status "OK" → 200 so components that check numeric status work
+  const status = typeof obj.status === 'number' ? obj.status : 200;
+
+  if (!Array.isArray(obj.data)) return { ...obj, status };
+
+  let items: unknown[];
+  if (path === '/matches') {
+    items = obj.data.map(normalizeMatch);
+  } else if (path === '/results') {
+    items = obj.data.map(normalizeResult);
+  } else if (path.startsWith('/events')) {
+    items = obj.data.map(normalizeEvent);
+  } else {
+    items = obj.data;
+  }
+
+  return { status, data: items };
 }
 
 // ─── Route Handler ────────────────────────────────────────────────────────────
@@ -82,19 +209,18 @@ export async function GET(
   { params }: { params: { path: string[] } }
 ) {
   const rawPath = '/' + params.path.join('/');
-  const search = request.nextUrl.search;
 
-  // ── Rewrite old vlrggapi path style → vlr.orlandomm.net style ────────────
-  // Components still call /match?q=results, /match?q=live_score, etc.
-  // New API uses /results, /matches, /events, /rankings directly.
   const { path, rewrittenSearch } = rewriteVlrPath(rawPath, request.nextUrl.searchParams);
+
+  // Short-circuit for paths with no upstream endpoint
+  if (path === '/__no_match_detail__') {
+    return NextResponse.json({ status: 404, data: null }, { status: 200 });
+  }
 
   const cacheKey = `${path}${rewrittenSearch}`;
 
-  // Probabilistic cache sweep — keeps memory usage bounded without a timer
   if (Math.random() < 0.05) evictExpired();
 
-  // ── Cache hit ──
   const cached = cache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return NextResponse.json(cached.data, {
@@ -106,7 +232,6 @@ export async function GET(
     });
   }
 
-  // ── Proxy to VLR API ──
   const upstreamUrl = `${VLR_BASE_URL}${path}${rewrittenSearch}`;
 
   try {
@@ -115,7 +240,7 @@ export async function GET(
     });
 
     if (upstream.status === 404) {
-      return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
+      return NextResponse.json({ status: 200, data: [] }, { status: 200 });
     }
 
     if (upstream.status === 429) {
@@ -129,13 +254,14 @@ export async function GET(
       );
     }
 
-    const data = await upstream.json();
-    const ttl = getTTL(path, search);
+    const raw = await upstream.json();
+    const data = normalizeVlrResponse(path, raw);
+    const ttl = getTTL(path);
 
-    cache.set(cacheKey, { data, status: upstream.status, expiresAt: Date.now() + ttl });
+    cache.set(cacheKey, { data, status: 200, expiresAt: Date.now() + ttl });
 
     return NextResponse.json(data, {
-      status: upstream.status,
+      status: 200,
       headers: {
         'X-Cache': 'MISS',
         'X-Cache-TTL': String(ttl / 1000),

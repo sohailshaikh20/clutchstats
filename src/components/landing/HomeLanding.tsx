@@ -22,7 +22,8 @@ import {
 import { getRankByTier } from "@/lib/constants/ranks";
 import type { EsportsMatchCardDTO } from "@/types/esports";
 
-const TRY_PLAYERS = ["TenZ#0505", "Aspas#LLL", "s0m#000"] as const;
+// Active players verified against Henrik API (leaderboard top players, April 2026)
+const TRY_PLAYERS = ["CB10#Aegon", "raiku#hsp", "BLG Zayce#2009"] as const;
 
 function playerHref(riotId: string): string {
   const hash = riotId.lastIndexOf("#");
@@ -561,15 +562,20 @@ export default function HomeLanding() {
       {/* ─── LEADERBOARD PREVIEW ─── */}
       <section className="border-t border-white/5 px-4 py-20 md:px-8">
         <div className="mx-auto max-w-2xl">
-          <motion.h2
-            initial={reduced ? false : { opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={reduced ? { duration: 0 } : { duration: 0.45 }}
-            className="text-center font-heading text-xs font-semibold uppercase tracking-widest text-text-secondary"
-          >
-            TOP PLAYERS THIS ACT
-          </motion.h2>
+          <div className="flex items-center justify-center gap-3">
+            <motion.h2
+              initial={reduced ? false : { opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={reduced ? { duration: 0 } : { duration: 0.45 }}
+              className="font-heading text-xs font-semibold uppercase tracking-widest text-text-secondary"
+            >
+              TOP PLAYERS THIS ACT
+            </motion.h2>
+            <span className="rounded border border-white/10 bg-surface px-1.5 py-0.5 font-heading text-[10px] font-semibold uppercase tracking-wide text-text-secondary/60">
+              Sample data
+            </span>
+          </div>
 
           <motion.div
             initial="hidden"
