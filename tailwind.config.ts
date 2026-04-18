@@ -29,6 +29,9 @@ const config: Config = {
       fontFamily: {
         heading: ["var(--font-heading)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
+        display: ["var(--font-orbitron)", "system-ui", "sans-serif"],
+        "mono-display": ["var(--font-mono-display)", "ui-monospace", "monospace"],
+        "sans-tight": ["var(--font-sans-tight)", "system-ui", "sans-serif"],
       },
     },
   },

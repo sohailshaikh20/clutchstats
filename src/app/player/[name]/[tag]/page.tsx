@@ -1,26 +1,30 @@
 import type { Metadata } from "next";
 import { HenrikApiError, getHenrikClient } from "@/lib/api/henrik";
-import { pageMetadata } from "@/lib/page-metadata";
-import { AgentBreakdown } from "@/components/player/AgentBreakdown";
+import { buildPerformanceStats } from "@/app/player/[name]/[tag]/build-performance-stats";
+import { buildProfileHeaderData } from "@/app/player/[name]/[tag]/profile-header-data";
+import { AgentsTable } from "@/components/player/AgentsTable";
+import { buildAgentsTableData } from "@/lib/adapters/build-agents-table-data";
 import { MapPerformance } from "@/components/player/MapPerformance";
 import { MatchHistory } from "@/components/player/MatchHistory";
+import { matchRowsToMatches } from "@/lib/adapters/match";
 import { ModeBreakdownPills } from "@/components/player/ModeBreakdownPills";
-import { PercentileSection } from "@/components/player/PercentileSection";
+import { CompareBlock } from "@/components/player/CompareBlock";
+import { buildCompareRows } from "@/lib/player/build-compare-rows";
 import { PlayerNotFound } from "@/components/player/PlayerNotFound";
 import { PlayerPrivacy } from "@/components/player/PlayerPrivacy";
 import { ProfileErrorGeneric } from "@/components/player/ProfileErrorGeneric";
 import { ProfileFooterActions } from "@/components/player/ProfileFooterActions";
 import { ProfileHeader } from "@/components/player/ProfileHeader";
+import { ProfileTabs } from "@/components/player/ProfileTabs";
+import { PerformanceGrid } from "@/components/player/PerformanceGrid";
 import { ProfileKdTrendChart, type TrendPoint } from "@/components/player/ProfileKdTrendChart";
-import { PremiumLockedStats } from "@/components/player/PremiumLockedStats";
-import { SecondaryStatsRow } from "@/components/player/SecondaryStatsRow";
-import { StatsOverview } from "@/components/player/StatsOverview";
 import {
   buildPlayerProfilePayload,
   isPrivacyHenrikError,
   type MatchRow,
 } from "@/lib/player/build-profile-payload";
 import { defaultMmrResponse } from "@/lib/player/default-mmr";
+import { pageMetadata } from "@/lib/page-metadata";
 import { calculatePlayerStats } from "@/lib/stats/calculator";
 import { fetchValorantGameAssets } from "@/lib/valorant/game-assets";
 import type { HenrikMatch, ValorantRegion } from "@/types/valorant";
@@ -31,6 +35,12 @@ function asRegion(r: string): ValorantRegion {
   if (x === "br" || x === "brazil") return "br";
   if (x === "na" || x === "eu" || x === "ap" || x === "kr") return x;
   return "na";
+}
+
+function tierDisplayLabel(patched: string | null): string {
+  if (!patched) return "Tier";
+  const first = patched.trim().split(/\s+/)[0];
+  return first && first.length > 0 ? first : "Tier";
 }
 
 function buildTrendPoints(matches: MatchRow[]): TrendPoint[] {
@@ -124,50 +134,54 @@ export default async function PlayerProfilePage({
     const rankPatched = mmr.current_data.currenttierpatched ?? null;
     const statsCalc = calculatePlayerStats(matches, account.puuid, rankPatched);
     const trendData = buildTrendPoints(payload.matches);
+    const headerData = buildProfileHeaderData(payload, statsCalc, mmr, payload.matches);
+    const performanceStats = buildPerformanceStats(statsCalc, rankPatched, payload.matches);
+    const isProUser = false;
+    const tierLabel = tierDisplayLabel(rankPatched);
+    const agentsData = buildAgentsTableData({
+      agentRows: payload.agents,
+      henrikMatches: matches,
+      puuid: account.puuid,
+      mapsByKey: assets.mapsByKey,
+      agentsByUuid: assets.agentsByUuid,
+      agentsByName: assets.agentsByName,
+    });
+    const compareRows = buildCompareRows(statsCalc.premium.performancePercentile, rankPatched);
+    const compareTier = tierDisplayLabel(rankPatched);
 
     return (
       <div className="min-h-screen bg-background pb-8">
-        <ProfileHeader
-          cardWide={payload.cardWide}
-          riotName={payload.riotName}
-          riotTag={payload.riotTag}
-          regionFlag={payload.regionFlag}
-          accountLevel={payload.accountLevel}
-          current={{
-            name: payload.currentRank.name,
-            rr: payload.currentRank.rr,
-            mmrDelta: payload.currentRank.mmrDelta,
-            largeIconUrl: payload.currentRank.largeIconUrl,
-            glowColor: payload.currentRank.glowColor,
-          }}
-          peak={payload.peakRank}
-        />
+        <ProfileHeader data={headerData} />
+        <ProfileTabs />
 
-        <div className="mx-auto w-full max-w-screen-2xl space-y-5 px-4 pb-8 pt-5 sm:px-6 lg:px-8 xl:px-10">
-          <StatsOverview
-            kdRatio={payload.stats.kdRatio}
-            winRate={payload.stats.winRate}
-            headshotPct={payload.stats.headshotPct}
-            avgCombatScore={payload.stats.avgCombatScore}
-          />
-          <SecondaryStatsRow
-            avgDamagePerRound={statsCalc.premium.avgDamagePerRound}
-            killsPerRound={statsCalc.premium.killsPerRound}
-            deathsPerRound={statsCalc.premium.deathsPerRound}
-            abilityCastsTotal={statsCalc.premium.abilityCasts?.total ?? null}
-          />
-          <ProfileKdTrendChart data={trendData} />
-          <PremiumLockedStats />
-        </div>
+        <section id="overview" className="scroll-mt-[120px]">
+          <PerformanceGrid stats={performanceStats} isProUser={isProUser} tierLabel={tierLabel} />
+          <div className="mx-auto w-full max-w-screen-2xl space-y-5 px-4 pb-8 pt-2 sm:px-6 lg:px-8 xl:px-10">
+            <ProfileKdTrendChart data={trendData} />
+          </div>
+          <ModeBreakdownPills modes={statsCalc.premium.modeBreakdown} />
+        </section>
 
-        <ModeBreakdownPills modes={statsCalc.premium.modeBreakdown} />
-        <MatchHistory matches={payload.matches} />
-        <PercentileSection
-          data={statsCalc.premium.performancePercentile}
-          rankPatched={statsCalc.premium.rankName}
-        />
-        <AgentBreakdown agents={payload.agents} />
-        <MapPerformance maps={payload.maps} />
+        <section id="matches" className="scroll-mt-[120px]">
+          <MatchHistory matches={matchRowsToMatches(payload.matches)} />
+        </section>
+
+        <AgentsTable agents={agentsData} />
+
+        <section id="maps" className="scroll-mt-[120px]">
+          <MapPerformance maps={payload.maps} />
+        </section>
+
+        <section id="weapons" className="scroll-mt-[120px]">
+          <div className="py-12 text-center font-body text-sm text-white/30">
+            Weapons breakdown coming soon
+          </div>
+        </section>
+
+        <section id="compare" className="scroll-mt-[120px]">
+          <CompareBlock tier={compareTier} rows={compareRows} />
+        </section>
+
         <ProfileFooterActions riotName={payload.riotName} riotTag={payload.riotTag} />
       </div>
     );

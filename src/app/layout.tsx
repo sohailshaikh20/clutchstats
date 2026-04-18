@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Rajdhani } from "next/font/google";
+import { DM_Sans, Inter_Tight, Orbitron, Rajdhani, Space_Mono } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { PageFadeIn } from "@/components/layout/PageFadeIn";
@@ -16,6 +16,27 @@ const fontBody = DM_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   variable: "--font-body",
+  display: "swap",
+});
+
+const fontOrbitron = Orbitron({
+  subsets: ["latin"],
+  weight: ["400", "700", "900"],
+  variable: "--font-orbitron",
+  display: "swap",
+});
+
+const fontSpaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-mono-display",
+  display: "swap",
+});
+
+const fontInterTight = Inter_Tight({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans-tight",
   display: "swap",
 });
 
@@ -67,7 +88,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fontHeading.variable} ${fontBody.variable}`}
+      className={`${fontHeading.variable} ${fontBody.variable} ${fontOrbitron.variable} ${fontSpaceMono.variable} ${fontInterTight.variable}`}
     >
       <body className="font-body">
         <div className="relative z-10 flex min-h-screen flex-col">

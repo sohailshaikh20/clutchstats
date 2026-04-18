@@ -1,149 +1,283 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { Bell, Share2 } from "lucide-react";
 import Image from "next/image";
+import { motion, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AvatarFrame } from "@/components/player/profile/AvatarFrame";
+import { LiveIndicator } from "@/components/player/profile/LiveIndicator";
+import { RankBadge } from "@/components/player/profile/RankBadge";
+import { StatPill, type HeadlineStat } from "@/components/player/profile/StatPill";
 
-type Peak = { patched: string; tier: number; largeIconUrl: string | null };
-type Current = {
+export interface ProfileHeaderData {
   name: string;
-  rr: number;
-  mmrDelta: number;
-  largeIconUrl: string | null;
-  glowColor: string | null;
-};
-
-function rankGlowShadow(glow: string | null): string {
-  const base = glow ?? "rgba(255, 70, 85, 0.55)";
-  const m = base.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-  if (m) return `0 0 30px rgba(${m[1]},${m[2]},${m[3]},0.4)`;
-  return `0 0 30px ${base}`;
+  tag: string;
+  region: string;
+  countryCode?: string;
+  playerCardWideUrl: string;
+  level: number;
+  currentTier: string;
+  currentRR: number;
+  currentRRDelta?: number;
+  leaderboardRank?: number;
+  peakTier: string;
+  peakRR?: number;
+  peakEpisode?: string;
+  topAgent: { name: string; splashUrl: string; playtimeHours: number; matches: number };
+  clutchRating: number;
+  clutchPercentile: number;
+  clutchDelta?: number;
+  headlineStats: HeadlineStat[];
+  session?: { matchesLast24h: number; wins24h: number; losses24h: number; lastSeenISO: string };
+  isOnline?: boolean;
+  isStreaming?: boolean;
+  /** Region flag emoji for meta row */
+  regionFlag?: string;
 }
 
-export function ProfileHeader({
-  cardWide,
-  riotName,
-  riotTag,
-  regionFlag,
-  accountLevel,
-  current,
-  peak,
-}: {
-  cardWide: string;
-  riotName: string;
-  riotTag: string;
-  regionFlag: string;
-  accountLevel: number;
-  current: Current;
-  peak: Peak;
-}) {
+function formatSeen(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff = Math.max(0, Date.now() - t);
+  const sec = diff / 1000;
+  if (sec < 45) return "Just now";
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+  if (sec < 86400 * 30) return `${Math.floor(sec / 86400)}d ago`;
+  return `${Math.floor(sec / (86400 * 30))}mo ago`;
+}
+
+export function ProfileHeader({ data }: { data: ProfileHeaderData }) {
   const reduced = Boolean(useReducedMotion());
-  const iconShadow = rankGlowShadow(current.glowColor);
+  const [seenLabel, setSeenLabel] = useState("");
+
+  const lastSeenIso = data.session?.lastSeenISO;
+  useEffect(() => {
+    if (!lastSeenIso) {
+      setSeenLabel("");
+      return;
+    }
+    const tick = () => setSeenLabel(formatSeen(lastSeenIso));
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    return () => window.clearInterval(id);
+  }, [lastSeenIso]);
+
+  const share = useCallback(() => {
+    const path = `/player/${encodeURIComponent(data.name)}/${encodeURIComponent(data.tag)}`;
+    const url = typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+    void navigator.clipboard.writeText(url);
+  }, [data.name, data.tag]);
+
+  const session = data.session;
+  const showSession = session && session.matchesLast24h > 0;
+  const wr24 =
+    session && session.matchesLast24h > 0
+      ? ((session.wins24h / session.matchesLast24h) * 100).toFixed(0)
+      : "0";
+
+  const clutchStat: HeadlineStat = useMemo(
+    () => ({
+      key: "clutch",
+      label: "CLUTCH RATING",
+      value: String(data.clutchRating),
+      percentile: data.clutchPercentile,
+      delta: data.clutchDelta ?? 0,
+      trend: data.headlineStats[0]?.trend?.length ? data.headlineStats[0].trend : [400, 420, 450, 480, 500, 520],
+      trendDirection: (data.clutchDelta ?? 0) > 0 ? "up" : (data.clutchDelta ?? 0) < 0 ? "down" : "flat",
+    }),
+    [data.clutchRating, data.clutchPercentile, data.clutchDelta, data.headlineStats]
+  );
+
+  const container = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: reduced ? 0 : 0.06,
+        delayChildren: reduced ? 0 : 0.1,
+      },
+    },
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 12 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+    },
+  };
+
+  const code = (data.countryCode ?? data.region).toUpperCase();
 
   return (
     <motion.header
-      initial={reduced ? false : { opacity: 0, y: -12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reduced ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
-      className="relative min-h-[220px] overflow-hidden border-b border-white/10 sm:min-h-[240px]"
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="relative w-full overflow-hidden border-b border-white/[0.06] bg-[#0a0a0c]"
     >
-      <div className="absolute inset-0">
+      {/* ── Banner ── */}
+      <motion.div
+        variants={item}
+        className="relative min-h-[320px] w-full sm:min-h-[340px] lg:min-h-[360px]"
+      >
+        {/* Player card base */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={cardWide}
+          src={data.playerCardWideUrl}
           alt=""
-          className="h-full min-h-[220px] w-full object-cover object-[center_22%]"
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.35]"
+          style={{ objectPosition: "center 30%" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-background/55 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background from-[48%] via-background/45 to-accent-red/12" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/25 to-transparent" />
-      </div>
 
-      <div className="relative z-[1] mx-auto flex min-h-[220px] w-full max-w-screen-2xl flex-col justify-end px-4 pb-5 pt-10 sm:min-h-[240px] sm:px-6 sm:pb-6 lg:px-8 xl:px-10">
-        <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="flex min-w-0 flex-wrap items-end gap-2 break-words">
-              <span className="shrink-0 text-2xl leading-none opacity-90" aria-hidden>
-                {regionFlag}
-              </span>
-              <span className="min-w-0 font-heading text-3xl font-bold tracking-tight text-white md:text-4xl">
-                {riotName}
-                <span className="font-heading text-2xl font-bold text-text-secondary md:text-3xl">
-                  #{riotTag}
-                </span>
-              </span>
-            </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-white/15 bg-black/40 px-3 py-1.5 font-body text-[11px] font-semibold uppercase tracking-wider text-text-primary backdrop-blur-sm min-h-[36px] inline-flex items-center">
-                Level {accountLevel}
-              </span>
-              <div className="flex min-h-[36px] items-center gap-2 rounded-full border border-white/12 bg-black/35 px-3 py-1.5 backdrop-blur-sm">
-                {peak.largeIconUrl ? (
-                  <Image
-                    src={peak.largeIconUrl}
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="size-6 object-contain"
-                  />
-                ) : null}
-                <span className="font-body text-[11px] font-medium uppercase tracking-wide text-text-secondary">
-                  Peak{" "}
-                  <span className="font-heading font-semibold text-text-primary">{peak.patched}</span>
-                </span>
-              </div>
+        {/* Duotone layers */}
+        <div
+          className="pointer-events-none absolute inset-0 mix-blend-multiply"
+          style={{ backgroundColor: "#FF4655", opacity: 0.25 }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 mix-blend-color"
+          style={{ backgroundColor: "#0a0a0c", opacity: 0.5 }}
+        />
+
+        {/* Agent splash right */}
+        {data.topAgent.splashUrl ? (
+          <div className="pointer-events-none absolute inset-y-0 right-0 h-full w-1/2 md:w-[40%]">
+            <Image
+              src={data.topAgent.splashUrl}
+              alt=""
+              fill
+              className="object-cover mix-blend-luminosity"
+              style={{ objectPosition: "right center", opacity: 0.6 }}
+              sizes="(max-width:768px) 50vw, 40vw"
+              priority
+            />
+          </div>
+        ) : null}
+
+        {/* Vignette */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 120% 100% at 0% 50%, rgba(10,10,12,0.98) 0%, rgba(10,10,12,0.85) 35%, rgba(10,10,12,0.3) 70%, transparent 100%)",
+          }}
+        />
+
+        {/* Grid */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #fff 1px, transparent 1px),
+              linear-gradient(to bottom, #fff 1px, transparent 1px)
+            `,
+            backgroundSize: "48px 48px",
+          }}
+        />
+
+        {/* Scanlines */}
+        <div
+          className="pointer-events-none absolute inset-0 mix-blend-overlay opacity-[0.05]"
+          style={{
+            backgroundImage: "repeating-linear-gradient(0deg, transparent 0, transparent 2px, #fff 2px, #fff 3px)",
+          }}
+        />
+
+        {/* Top bar */}
+        <div className="absolute left-0 right-0 top-0 z-20 flex items-start justify-between gap-4 px-5 py-5 sm:px-8">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-1 h-8 w-[3px] shrink-0 bg-accent-red" aria-hidden />
+            <div className="min-w-0">
+              <p className="font-mono-display text-[11px] font-bold uppercase tracking-[0.3em] text-white/50">
+                Main agent
+              </p>
+              <p className="truncate font-sans-tight text-sm font-medium text-white/90">{data.topAgent.name}</p>
+              <p className="mt-0.5 font-mono-display text-[11px] text-white/45">
+                · {data.topAgent.playtimeHours.toFixed(0)}h · {data.topAgent.matches} matches
+              </p>
             </div>
           </div>
-
-          <div className="flex shrink-0 items-end gap-4 lg:justify-end">
-            <div
-              className="relative rounded-xl p-1 transition-[filter] hover:brightness-110"
-              style={{ boxShadow: iconShadow }}
+          <div className="flex shrink-0 items-center gap-2">
+            {data.isStreaming ? <LiveIndicator /> : null}
+            <button
+              type="button"
+              title="Coming soon"
+              className="inline-flex size-8 items-center justify-center rounded-sm border border-white/[0.06] bg-white/[0.03] text-white/70 transition-colors hover:border-accent-red/40 hover:bg-accent-red hover:text-white"
             >
-              {current.largeIconUrl ? (
-                <Image
-                  src={current.largeIconUrl}
-                  alt={current.name}
-                  width={72}
-                  height={72}
-                  sizes="72px"
-                  className="size-16 object-contain sm:size-[72px]"
-                />
-              ) : (
-                <div className="size-16 rounded-lg bg-surface-lighter sm:size-[72px]" />
-              )}
-            </div>
-            <div className="min-w-0 pb-0.5 text-left">
-              <p className="font-heading text-base font-bold text-text-primary sm:text-lg">
-                {current.name}
-              </p>
-              <div className="mt-1 flex flex-wrap items-baseline gap-3">
-                <span className="font-heading text-2xl font-bold tabular-nums text-white sm:text-3xl">
-                  {current.rr}
-                  <span className="ml-1.5 text-base font-semibold tracking-wide text-text-secondary sm:text-lg">
-                    RR
-                  </span>
-                </span>
-                {current.mmrDelta !== 0 ? (
-                  <span
-                    className={`inline-flex items-center gap-0.5 font-heading text-xl font-bold tabular-nums sm:text-2xl ${
-                      current.mmrDelta > 0 ? "text-win" : "text-loss"
-                    }`}
-                  >
-                    {current.mmrDelta > 0 ? (
-                      <ArrowUp className="size-5 shrink-0" aria-hidden />
-                    ) : (
-                      <ArrowDown className="size-5 shrink-0" aria-hidden />
-                    )}
-                    {current.mmrDelta > 0 ? "+" : ""}
-                    {current.mmrDelta}
-                  </span>
-                ) : null}
-              </div>
-            </div>
+              <Bell className="size-4" />
+              <span className="sr-only">Follow</span>
+            </button>
+            <button
+              type="button"
+              title="Copy profile link"
+              onClick={share}
+              className="inline-flex size-8 items-center justify-center rounded-sm border border-white/[0.06] bg-white/[0.03] text-white/70 transition-colors hover:border-accent-red/40 hover:bg-accent-red hover:text-white"
+            >
+              <Share2 className="size-4" />
+              <span className="sr-only">Share</span>
+            </button>
           </div>
         </div>
-      </div>
+
+        {/* Identity row */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-6 px-5 pb-6 pt-12 sm:flex-row sm:items-end sm:px-8 sm:pb-8">
+          <AvatarFrame name={data.name} level={data.level} isOnline={data.isOnline} />
+
+          <div className="min-w-0 flex-1 pb-1">
+            <p className="font-mono-display text-[11px] font-bold uppercase tracking-[0.25em] text-white/40">
+              {data.regionFlag ? <span className="mr-1">{data.regionFlag}</span> : null}
+              {code}
+              {" // "}
+              {data.region.toUpperCase()}
+              {" // "}
+              <span suppressHydrationWarning>Seen {seenLabel || (lastSeenIso ? "…" : "—")}</span>
+            </p>
+            <h1 className="mt-1 flex flex-wrap items-baseline gap-2">
+              <span className="font-display text-[48px] font-black leading-none tracking-tight text-white sm:text-[56px]">
+                {data.name}
+              </span>
+              <span className="font-mono-display text-2xl font-normal text-white/30">#{data.tag}</span>
+            </h1>
+            {showSession && session ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 font-mono-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+                <span>Last 24h</span>
+                <span className="text-[#00E5D1]">{session.wins24h}W</span>
+                <span className="text-white/30">/</span>
+                <span className="text-accent-red">{session.losses24h}L</span>
+                <span className="text-white/35">·</span>
+                <span className="text-white/60">{wr24}% WR</span>
+                <span className="text-white/35">·</span>
+                <span className="text-white/60">{session.matchesLast24h} matches</span>
+              </div>
+            ) : null}
+          </div>
+
+          <RankBadge
+            currentTierPatched={data.currentTier}
+            currentRR={data.currentRR}
+            currentRRDelta={data.currentRRDelta}
+            peakTierPatched={data.peakTier}
+            peakRR={data.peakRR}
+            peakEpisode={data.peakEpisode}
+            leaderboardRank={data.leaderboardRank}
+          />
+        </div>
+      </motion.div>
+
+      {/* Stats strip */}
+      <motion.div
+        variants={item}
+        className="grid grid-cols-1 border-t border-white/[0.06] bg-[#0D0D10] md:grid-cols-5"
+      >
+        <StatPill stat={clutchStat} variant="clutch" />
+        {data.headlineStats.slice(0, 4).map((s) => (
+          <StatPill key={s.key} stat={s} />
+        ))}
+      </motion.div>
     </motion.header>
   );
 }
+
+export type { HeadlineStat } from "@/components/player/profile/StatPill";
