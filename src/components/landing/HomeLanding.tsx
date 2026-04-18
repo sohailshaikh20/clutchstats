@@ -180,28 +180,28 @@ const featureCards = [
     icon: BarChart3,
     title: "PLAYER STATS",
     sublabel: "40+ METRICS PER MATCH",
-    body: "Every metric you need and some Tracker does not show. KAST, DDA, econ rating, clutch %.",
+    body: "40+ metrics per match, including KAST, DDA, and econ rating.",
     href: "/stats",
   },
   {
     icon: Trophy,
     title: "LIVE ESPORTS",
     sublabel: "VCT + CHALLENGERS",
-    body: "Full schedule, live scores, standings. Match notifications coming soon.",
+    body: "Full VCT schedule, live scores, standings. Match alerts soon.",
     href: "/esports",
   },
   {
     icon: Users,
     title: "SQUAD FINDER",
     sublabel: "RANK-VERIFIED LFG",
-    body: "Find teammates at your rank with the voice chat, region, and playstyle you want.",
+    body: "Find teammates at your rank with your region and voice pref.",
     href: "/lfg",
   },
   {
     icon: Target,
     title: "DEEP ANALYTICS",
     sublabel: "PRO-GRADE INSIGHTS",
-    body: "Peer comparison, trend analysis, agent meta shifts. The stuff pros actually study.",
+    body: "Peer comparison, trend charts, and agent meta shifts for pros.",
     href: "/player/CB10/Aegon",
   },
 ] as const;
@@ -306,20 +306,17 @@ function HeroTicker() {
 }
 
 function TeamLogo({ abbr }: { abbr: string }) {
-  const initials = abbr.slice(0, 2).toUpperCase();
   return (
-    <div className="flex size-5 shrink-0 items-center justify-center bg-white/[0.08] font-mono-display text-[9px] font-bold text-white/60">
-      {initials}
-    </div>
+    <div className="flex size-5 shrink-0 items-center justify-center bg-white/[0.08]" aria-label={`${abbr} logo`} />
   );
 }
 
 function TeamLogoLg({ abbr }: { abbr: string }) {
-  const initials = abbr.slice(0, 2).toUpperCase();
   return (
-    <div className="flex size-8 shrink-0 items-center justify-center bg-white/[0.08] font-mono-display text-[10px] font-bold text-white/60 md:size-8">
-      {initials}
-    </div>
+    <div
+      className="flex size-8 shrink-0 items-center justify-center bg-white/[0.08] md:size-8"
+      aria-label={`${abbr} logo`}
+    />
   );
 }
 
@@ -341,13 +338,20 @@ function ExpandedMatchCardView({ card }: { card: ExpandedMatchCard }) {
         >
           {card.league}
         </span>
-        <span
-          className={`font-mono-display text-[10px] font-bold uppercase ${
-            isLive ? "text-[#FF4655]" : isFinal ? "text-white/40" : "text-white/50"
-          }`}
-        >
-          {isLive ? "LIVE" : isFinal ? "FINAL" : "UPCOMING"}
-        </span>
+        {isFinal ? (
+          <div className="text-right">
+            <p className="font-mono-display text-[10px] font-bold uppercase text-white/40">FINAL</p>
+            <p className="font-mono-display text-[9px] text-white/50">{card.finalScore ?? (hasScores ? `${sA}-${sB}` : "—")}</p>
+          </div>
+        ) : (
+          <span
+            className={`font-mono-display text-[10px] font-bold uppercase ${
+              isLive ? "text-[#FF4655]" : "text-white/50"
+            }`}
+          >
+            {isLive ? "LIVE" : "UPCOMING"}
+          </span>
+        )}
       </div>
       <div className="my-5 flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-col items-start gap-2">
@@ -388,12 +392,24 @@ function RankChevron({ rank }: { rank: number }) {
   if (rank > 3) {
     return <span className="font-mono-display text-sm tabular-nums text-white/60">{rank}</span>;
   }
-  const bg = rank === 1 ? "bg-[#FFF6A1] text-[#0A0A0C]" : rank === 2 ? "bg-white/80 text-[#0A0A0C]" : "bg-[#A06A3B] text-white";
+  const bg =
+    rank === 1
+      ? "bg-[#FFF6A1] text-[#0A0A0C]"
+      : rank === 2
+        ? "bg-white/80 text-[#0A0A0C]"
+        : "bg-[#C77B40] text-[#0A0A0C]";
+  const glow =
+    rank === 1
+      ? "0 0 12px rgba(255, 246, 161, 0.35)"
+      : rank === 2
+        ? "0 0 10px rgba(255, 255, 255, 0.2)"
+        : "0 0 10px rgba(199, 123, 64, 0.35)";
   return (
     <span
       className={`inline-flex min-w-[28px] items-center justify-center px-1.5 py-0.5 font-mono-display text-xs font-bold tabular-nums ${bg}`}
       style={{
         clipPath: "polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px)",
+        boxShadow: glow,
       }}
     >
       {rank}
@@ -518,7 +534,7 @@ export default function HomeLanding() {
               animate={{ opacity: 1, y: 0 }}
               transition={reduced ? { duration: 0 } : { duration: 0.6, delay: 0.08, ease: heroEase }}
               className="mt-4 font-display font-black leading-[0.95] tracking-[-0.02em] text-white"
-              style={{ fontSize: "clamp(40px, 5vw, 72px)" }}
+              style={{ fontSize: "clamp(36px, 4vw, 56px)" }}
             >
               YOUR EDGE <span className="text-[#FF4655]">{"// ONE PROFILE"}</span>
             </motion.h1>
@@ -660,10 +676,12 @@ export default function HomeLanding() {
                   <p className="mt-1 font-mono-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
                     {card.sublabel}
                   </p>
-                  <p className="mt-3 line-clamp-2 font-sans-tight text-sm text-white/60">{card.body}</p>
-                  <span className="pointer-events-none absolute bottom-5 right-5 text-white/30 transition-all group-hover:translate-x-1 group-hover:text-[#FF4655]">
-                    →
-                  </span>
+                  <p className="mt-3 font-sans-tight text-sm text-white/60">{card.body}</p>
+                  <div className="mt-4 flex justify-end">
+                    <span className="text-white/30 transition-all group-hover:translate-x-1 group-hover:text-[#FF4655]" aria-hidden>
+                      →
+                    </span>
+                  </div>
                 </Link>
               </motion.div>
             );
@@ -905,13 +923,12 @@ export default function HomeLanding() {
             </Link>
           </div>
           <div className="mt-8 flex flex-col items-center justify-center gap-2 font-mono-display text-[11px] text-white/50 sm:flex-row sm:gap-4">
-            <span>★ 4.8 ON DISCORD</span>
+            <span>BUILT BY A GAMER</span>
             <span className="hidden text-white/30 sm:inline">·</span>
-            <span>147K PLAYERS TRACKED</span>
+            <span>BETA — FREE WHILE WE GROW</span>
             <span className="hidden text-white/30 sm:inline">·</span>
-            <span>USED BY 12 VCT PROS</span>
+            <span>YOUR FEEDBACK SHAPES V1</span>
           </div>
-          {/* TODO(marketing): replace social proof strip with real numbers once Discord reviews / pro endorsements exist */}
         </motion.div>
       </section>
     </div>

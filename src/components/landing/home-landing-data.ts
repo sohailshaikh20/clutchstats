@@ -58,6 +58,7 @@ export type ExpandedMatchCard = {
   teamA: { abbr: string; score?: number };
   teamB: { abbr: string; score?: number };
   status: "live" | "upcoming" | "final";
+  finalScore?: string;
   mapLine?: string;
   timeLine?: string;
   metaRight?: string;
@@ -75,18 +76,18 @@ export const EXPANDED_MATCH_CARDS: ExpandedMatchCard[] = [
     status: "live",
     mapLine: "MAP 2 · ASCENT",
     metaRight: "LIVE NOW",
-    filter: "live",
+    filter: "today",
   },
   {
     id: "m2",
     league: "VCT EMEA",
     leagueKey: "emea",
-    teamA: { abbr: "FNC", score: 11 },
-    teamB: { abbr: "TH", score: 13 },
-    status: "live",
-    mapLine: "MAP 3 · BIND",
-    metaRight: "LIVE NOW",
-    filter: "live",
+    teamA: { abbr: "FNC" },
+    teamB: { abbr: "KC" },
+    status: "upcoming",
+    timeLine: "IN 2H 14M",
+    metaRight: "APR 19",
+    filter: "today",
   },
   {
     id: "m3",
@@ -112,27 +113,29 @@ export const EXPANDED_MATCH_CARDS: ExpandedMatchCard[] = [
   },
   {
     id: "m5",
-    league: "CHALLENGERS",
-    leagueKey: "chl",
-    teamA: { abbr: "GX", score: 2 },
-    teamB: { abbr: "BBL", score: 0 },
-    status: "final",
-    mapLine: "BO3",
-    metaRight: "APR 18",
-    filter: "week",
+    league: "VCT EMEA",
+    leagueKey: "emea",
+    teamA: { abbr: "TH" },
+    teamB: { abbr: "BBL" },
+    status: "upcoming",
+    timeLine: "IN 8H 22M",
+    metaRight: "APR 19",
+    filter: "today",
   },
   {
     id: "m6",
-    league: "VCT EMEA",
-    leagueKey: "emea",
-    teamA: { abbr: "KC", score: 13 },
-    teamB: { abbr: "TL", score: 7 },
+    league: "VCT PAC",
+    leagueKey: "pac",
+    teamA: { abbr: "GEN", score: 13 },
+    teamB: { abbr: "T1", score: 11 },
     status: "final",
-    mapLine: "BO3 · LOTUS",
-    metaRight: "APR 17",
-    filter: "week",
+    finalScore: "13-11",
+    metaRight: "APR 19",
+    filter: "today",
   },
 ];
+
+// TODO(backend): replace with real /api/esports/feed when available
 
 export const TRENDING_PLAYERS = [
   "CB10#Aegon",
