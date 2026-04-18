@@ -16,6 +16,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
 const navItems = [
+  { href: "/", label: "Home" },
   { href: "/stats", label: "Stats" },
   { href: "/esports", label: "Esports" },
   { href: "/roadmaps", label: "Roadmaps" },
@@ -30,16 +31,16 @@ const tabItems = [
 ] as const;
 
 function isNavActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
 function navLinkClass(active: boolean) {
   return [
-    "relative inline-flex pb-1 font-heading text-sm font-semibold uppercase tracking-wide transition-colors",
-    "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:rounded-full after:bg-accent-red after:transition-opacity",
+    "relative inline-flex font-heading text-sm font-semibold uppercase tracking-wide transition-colors",
+    "after:pointer-events-none after:absolute after:left-0 after:right-0 after:-bottom-[18px] after:h-[2px] after:bg-[#FF4655] after:transition-opacity after:content-['']",
     active
-      ? "text-accent-red after:opacity-100"
-      : "text-text-secondary after:opacity-0 hover:text-text-primary hover:after:opacity-40",
+      ? "text-white after:opacity-100"
+      : "text-white/70 after:opacity-0 hover:text-white hover:after:opacity-40",
   ].join(" ");
 }
 
@@ -89,7 +90,7 @@ export function Navbar() {
           </Link>
 
           <motion.nav
-            className="hidden items-center gap-8 md:flex"
+            className="hidden items-center gap-10 md:flex"
             initial="hidden"
             animate="show"
             variants={
@@ -223,8 +224,8 @@ export function Navbar() {
                         className={[
                           "block rounded-lg px-3 py-3 font-heading text-base font-semibold uppercase tracking-wide",
                           active
-                            ? "bg-surface-light text-accent-red"
-                            : "text-text-secondary hover:bg-surface-light/60 hover:text-text-primary",
+                            ? "bg-surface-light text-white"
+                            : "text-white/70 hover:bg-surface-light/60 hover:text-white",
                         ].join(" ")}
                       >
                         {item.label}
@@ -253,8 +254,8 @@ export function Navbar() {
                   className={[
                     "flex flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-heading font-semibold uppercase tracking-wide transition-colors",
                     active
-                      ? "text-accent-red"
-                      : "text-text-secondary hover:text-text-primary",
+                      ? "text-white"
+                      : "text-white/70 hover:text-white",
                   ].join(" ")}
                 >
                   <Icon className="size-5 shrink-0" aria-hidden />
