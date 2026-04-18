@@ -22,7 +22,8 @@ export function MatchCountdown({ unixSeconds }: { unixSeconds: number }) {
 
   return (
     <span className="font-heading text-xs font-bold tabular-nums text-accent-red">
-      {h}h {m}m {s}s
+      {h}h {m}m{" "}
+      <span className="inline-block min-w-[2ch] text-accent-red countdown-sec-pulse">{s}s</span>
     </span>
   );
 }

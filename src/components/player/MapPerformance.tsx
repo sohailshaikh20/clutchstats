@@ -1,8 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Image from "next/image";
-import { Bar, BarChart, Cell, ResponsiveContainer, XAxis } from "recharts";
+import { motion, useReducedMotion } from "framer-motion";
+import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import type { MapStatRow } from "@/lib/player/build-profile-payload";
 
 type Row = {
@@ -11,18 +10,63 @@ type Row = {
   games: number;
   fill: string;
   icon: string;
+  endLabel: string;
 };
 
 const sectionTitle = "Map performance";
 
+function MapTick(props: {
+  x?: number | string;
+  y?: number | string;
+  payload?: { value: string };
+  rows: Row[];
+}) {
+  const { rows, payload } = props;
+  const x = typeof props.x === "number" ? props.x : Number(props.x) || 0;
+  const y = typeof props.y === "number" ? props.y : Number(props.y) || 0;
+  const name = payload?.value ?? "";
+  const row = rows.find((r) => r.name === name);
+  return (
+    <g transform={`translate(${x - 2},${y})`}>
+      {row?.icon ? (
+        <image
+          href={row.icon}
+          width={24}
+          height={24}
+          x={-118}
+          y={-12}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      ) : (
+        <rect x={-118} y={-12} width={24} height={24} rx={4} fill="#243447" />
+      )}
+      <text
+        x={-88}
+        y={4}
+        fill="#ECE8E1"
+        fontSize={12}
+        className="font-heading"
+        style={{ fontFamily: "var(--font-heading), sans-serif" }}
+      >
+        {name.length > 14 ? `${name.slice(0, 13)}…` : name}
+      </text>
+    </g>
+  );
+}
+
 export function MapPerformance({ maps }: { maps: MapStatRow[] }) {
-  const data: Row[] = maps.map((m) => ({
-    name: m.mapName,
-    wr: Math.round(m.winRate * 10) / 10,
-    games: m.games,
-    fill: m.winRate >= 50 ? "#4AE3A7" : "#FF4655",
-    icon: m.listViewIcon,
-  }));
+  const reduced = Boolean(useReducedMotion());
+  const data: Row[] = maps.map((m) => {
+    const wr = Math.round(m.winRate * 10) / 10;
+    return {
+      name: m.mapName,
+      wr,
+      games: m.games,
+      fill: m.winRate >= 50 ? "#4AE3A7" : "#FF4655",
+      icon: m.listViewIcon,
+      endLabel: `${Math.round(m.winRate)}% (${m.games} games)`,
+    };
+  });
 
   if (data.length === 0) {
     return (
@@ -39,65 +83,64 @@ export function MapPerformance({ maps }: { maps: MapStatRow[] }) {
     );
   }
 
+  const chartH = Math.max(220, data.length * 44 + 32);
+
   return (
     <section className="border-t border-white/5 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-screen-2xl">
         <motion.h2
-          initial={{ opacity: 0, y: 8 }}
+          initial={reduced ? false : { opacity: 0, y: 8 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="font-heading text-xs font-semibold uppercase tracking-widest text-text-secondary"
         >
           {sectionTitle}
         </motion.h2>
-        <div className="mt-6 flex flex-col gap-4 rounded-xl border border-surface-light bg-surface p-6">
-          {data.map((row, i) => (
-            <motion.div
-              key={row.name}
-              initial={{ opacity: 0, x: -12 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-20px" }}
-              transition={{ delay: i * 0.04, duration: 0.35 }}
-              whileHover={{ x: 2, transition: { duration: 0.2 } }}
-              className="flex flex-col gap-2 rounded-lg border border-white/5 bg-background/30 p-2 transition-colors hover:border-white/10 sm:flex-row sm:items-center sm:gap-4 sm:p-3"
+        <div className="mt-6 rounded-xl border border-white/5 bg-surface p-4 sm:p-5">
+          <ResponsiveContainer width="100%" height={chartH}>
+            <BarChart
+              layout="vertical"
+              data={data}
+              margin={{ left: 4, right: 12, top: 8, bottom: 8 }}
+              barCategoryGap={10}
             >
-              <div className="flex w-full shrink-0 items-center gap-2 sm:w-48">
-                {row.icon ? (
-                  <Image
-                    src={row.icon}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="size-7 object-contain"
+              <XAxis type="number" domain={[0, 100]} hide />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={124}
+                tickLine={false}
+                axisLine={false}
+                tick={(p) => (
+                  <MapTick
+                    x={p.x}
+                    y={p.y}
+                    payload={p.payload as { value: string } | undefined}
+                    rows={data}
                   />
-                ) : (
-                  <div className="size-7 rounded bg-surface-lighter" />
                 )}
-                <span className="truncate font-body text-sm font-semibold text-text-primary">
-                  {row.name}
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <div className="h-10 min-w-0 flex-1 rounded-lg border border-surface-light bg-surface px-1 py-1 transition-colors hover:border-white/10">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={[{ ...row }]}
-                      margin={{ top: 2, right: 4, left: 2, bottom: 2 }}
-                    >
-                      <XAxis type="number" domain={[0, 100]} hide />
-                      <Bar dataKey="wr" radius={[0, 6, 6, 0]} barSize={20} minPointSize={2}>
-                        <Cell fill={row.fill} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <span className="shrink-0 font-heading text-xs font-semibold tabular-nums text-text-secondary">
-                  {row.games} games
-                </span>
-              </div>
-            </motion.div>
-          ))}
+              />
+              <Bar
+                dataKey="wr"
+                barSize={22}
+                radius={[0, 6, 6, 0]}
+                isAnimationActive={!reduced}
+                animationDuration={900}
+                animationEasing="ease-out"
+              >
+                {data.map((e) => (
+                  <Cell key={e.name} fill={e.fill} />
+                ))}
+                <LabelList
+                  dataKey="endLabel"
+                  position="right"
+                  fill="#768691"
+                  fontSize={11}
+                  style={{ fontFamily: "var(--font-heading), sans-serif" }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </section>

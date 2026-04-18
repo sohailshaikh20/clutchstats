@@ -18,14 +18,15 @@ export function TeamLogo({
 }) {
   const [failed, setFailed] = useState(false);
   const hue = hueFromString(name);
-  const bg = `hsl(${hue} 55% 32%)`;
   const initials = teamInitials(name, 2);
 
   if (!logoUrl || failed) {
+    const hue2 = (hue + 42) % 360;
+    const gradient = `linear-gradient(135deg, hsl(${hue} 58% 36%) 0%, hsl(${hue2} 52% 22%) 100%)`;
     return (
       <div
-        className="flex shrink-0 items-center justify-center rounded-full border border-white/10 font-heading text-xs font-bold text-white"
-        style={{ width: size, height: size, backgroundColor: bg }}
+        className="flex shrink-0 items-center justify-center rounded-full border border-white/15 font-heading text-[11px] font-bold text-white shadow-inner ring-1 ring-white/10"
+        style={{ width: size, height: size, background: gradient }}
         aria-hidden
       >
         {initials}
@@ -44,7 +45,7 @@ export function TeamLogo({
       sizes={`${size}px`}
       placeholder="blur"
       blurDataURL={BLUR_DATA_URL}
-      className="shrink-0 rounded-full border border-white/10 bg-surface object-contain"
+      className="shrink-0 rounded-full border border-white/15 bg-surface object-contain ring-1 ring-white/10"
       onError={() => setFailed(true)}
     />
   );

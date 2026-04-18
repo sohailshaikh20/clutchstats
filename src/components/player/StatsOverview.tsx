@@ -1,22 +1,18 @@
 "use client";
 
-import { animate, motion } from "framer-motion";
+import { animate, motion, useReducedMotion } from "framer-motion";
 import { Crosshair } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import {
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useEffect, useState } from "react";
 
 function useCountUp(target: number, formatter: (n: number) => string) {
-  const [v, setV] = useState(0);
+  const reduced = Boolean(useReducedMotion());
+  const [v, setV] = useState(reduced ? target : 0);
 
   useEffect(() => {
+    if (reduced) {
+      setV(target);
+      return;
+    }
     setV(0);
     const controls = animate(0, target, {
       duration: 0.8,
@@ -24,12 +20,13 @@ function useCountUp(target: number, formatter: (n: number) => string) {
       onUpdate: setV,
     });
     return () => controls.stop();
-  }, [target]);
+  }, [target, reduced]);
 
   return formatter(v);
 }
 
 function WinRateRing({ pct }: { pct: number }) {
+  const reduced = Boolean(useReducedMotion());
   const r = 40;
   const c = 2 * Math.PI * r;
   const clamped = Math.min(100, Math.max(0, pct));
@@ -38,6 +35,11 @@ function WinRateRing({ pct }: { pct: number }) {
 
   useEffect(() => {
     const targetOffset = c * (1 - clamped / 100);
+    if (reduced) {
+      setDash(targetOffset);
+      setLabel(clamped);
+      return;
+    }
     setDash(c);
     setLabel(0);
     const a1 = animate(c, targetOffset, {
@@ -54,7 +56,7 @@ function WinRateRing({ pct }: { pct: number }) {
       a1.stop();
       a2.stop();
     };
-  }, [pct, c, clamped]);
+  }, [pct, c, clamped, reduced]);
 
   return (
     <div className="relative mx-auto size-[104px]">
@@ -89,11 +91,11 @@ function WinRateRing({ pct }: { pct: number }) {
 }
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 12 },
   show: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
+    transition: { delay: i * 0.04, duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
   }),
 };
 
@@ -102,15 +104,13 @@ export function StatsOverview({
   winRate,
   headshotPct,
   avgCombatScore,
-  kdHistory,
 }: {
   kdRatio: number;
   winRate: number;
   headshotPct: number;
   avgCombatScore: number;
-  /** Oldest → newest KD per match (last ~15) for sparkline */
-  kdHistory?: number[];
 }) {
+  const reduced = Boolean(useReducedMotion());
   const kdSafe = Number.isFinite(kdRatio) ? kdRatio : 0;
   const wrSafe = Number.isFinite(winRate) ? winRate : 0;
   const hsSafe = Number.isFinite(headshotPct) ? headshotPct : 0;
@@ -123,48 +123,12 @@ export function StatsOverview({
   const kdColor =
     kdSafe > 1 ? "text-win" : kdSafe < 1 ? "text-loss" : "text-text-secondary";
 
-  const kdChartData = useMemo(
-    () => (kdHistory ?? []).map((kd, i) => ({ i: i + 1, kd })),
-    [kdHistory]
-  );
-
   const cards = [
     {
       key: "kd",
       label: "KD ratio",
       node: (
-        <div className="flex w-full flex-col items-center gap-2">
-          {kdChartData.length > 1 ? (
-            <div className="h-16 w-full max-w-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={kdChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="i" hide />
-                  <YAxis domain={["auto", "auto"]} hide />
-                  <Tooltip
-                    contentStyle={{ background: "#1A2634", border: "1px solid #243447", borderRadius: 8 }}
-                    formatter={(v) => [`${Number(v).toFixed(2)}`, "KD"]}
-                    labelFormatter={(l) => `Match ${l}`}
-                  />
-                  <ReferenceLine
-                    y={1}
-                    stroke="#768691"
-                    strokeDasharray="4 4"
-                    label={{ value: "Avg", fill: "#768691", fontSize: 10 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="kd"
-                    stroke="#4AE3A7"
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={kdChartData.length < 40}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : null}
-          <span className={`font-heading text-4xl font-bold tabular-nums ${kdColor}`}>{kdDisplay}</span>
-        </div>
+        <span className={`font-heading text-4xl font-bold tabular-nums ${kdColor}`}>{kdDisplay}</span>
       ),
     },
     {
@@ -201,19 +165,19 @@ export function StatsOverview({
       animate="show"
       variants={{
         hidden: {},
-        show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
+        show: { transition: { staggerChildren: reduced ? 0 : 0.04, delayChildren: 0.04 } },
       }}
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      className="grid grid-cols-2 gap-3 lg:grid-cols-4"
     >
       {cards.map((c, i) => (
         <motion.div
           key={c.key}
           custom={i}
           variants={cardVariants}
-          whileHover={{ y: -2, transition: { duration: 0.2 } }}
+          whileHover={reduced ? undefined : { y: -2, transition: { duration: 0.2 } }}
           className="rounded-xl bg-gradient-to-br from-surface-light/70 via-surface-light/20 to-transparent p-px transition-shadow hover:shadow-lg hover:shadow-black/20"
         >
-          <div className="flex h-full flex-col rounded-[11px] bg-surface px-4 py-5 text-center transition-[border-color] hover:border-white/10">
+          <div className="flex h-full flex-col rounded-[11px] bg-surface px-3 py-5 text-center transition-[border-color] hover:border-white/10 sm:px-4">
             <div className="flex min-h-[4.5rem] flex-col items-center justify-center">{c.node}</div>
             <p className="mt-3 font-body text-xs font-medium uppercase tracking-wider text-text-secondary">
               {c.label}

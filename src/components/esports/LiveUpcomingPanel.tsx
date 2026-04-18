@@ -98,8 +98,8 @@ export function LiveUpcomingPanel() {
           No matches scheduled
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
-          There’s nothing live or on the calendar right now. Check back after announcements, or open
-          VLR for the full schedule.
+          There’s nothing live or on the calendar right now. Check back after announcements — new
+          fixtures appear here automatically.
         </p>
         <Link
           href="/esports"
@@ -137,7 +137,7 @@ export function LiveUpcomingPanel() {
               </motion.span>
               <div className="mt-4 flex flex-wrap items-center gap-4">
                 <div className="flex min-w-0 items-center gap-3">
-                  <TeamLogo name={featured.team1.name} logoUrl={featured.team1.logo} size={48} />
+                  <TeamLogo name={featured.team1.name} logoUrl={featured.team1.logo} size={36} />
                   <span className="min-w-0 font-heading text-2xl font-bold text-text-primary">
                     {featured.team1.name}
                   </span>
@@ -147,7 +147,7 @@ export function LiveUpcomingPanel() {
                   <span className="min-w-0 font-heading text-2xl font-bold text-text-primary">
                     {featured.team2.name}
                   </span>
-                  <TeamLogo name={featured.team2.name} logoUrl={featured.team2.logo} size={48} />
+                  <TeamLogo name={featured.team2.name} logoUrl={featured.team2.logo} size={36} />
                 </div>
               </div>
               <p className="mt-2 text-xs text-text-secondary">

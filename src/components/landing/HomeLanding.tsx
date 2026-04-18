@@ -505,10 +505,8 @@ export default function HomeLanding() {
                     whileHover={reduced ? undefined : { scale: 1.02, y: -2 }}
                     className="snap-start"
                   >
-                    <a
-                      href={m.vlrUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      href={m.id ? `/esports/match/${m.id}` : "/esports"}
                       className="flex h-36 min-w-[280px] max-w-[320px] flex-col justify-between rounded-xl border border-surface-light bg-surface p-4 transition-[border-color,box-shadow] hover:border-accent-blue/50 hover:shadow-glow-blue"
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -573,7 +571,7 @@ export default function HomeLanding() {
                       ) : (
                         <div className="h-7" />
                       )}
-                    </a>
+                    </Link>
                   </motion.div>
                 ))}
               </div>

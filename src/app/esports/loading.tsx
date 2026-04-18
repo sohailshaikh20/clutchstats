@@ -12,8 +12,11 @@ export default function EsportsLoading() {
       <div className="mt-8 space-y-6">
         <div className="h-40 animate-pulse rounded-xl border border-white/5 bg-surface" />
         <div className="grid gap-4 md:grid-cols-2">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-36 animate-pulse rounded-xl border border-white/5 bg-surface" />
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="h-36 animate-pulse rounded-xl border border-white/5 bg-surface"
+            />
           ))}
         </div>
       </div>

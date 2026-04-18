@@ -132,11 +132,26 @@
   }
 }
 
+@keyframes countdown-sec-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.countdown-sec-pulse {
+  animation: countdown-sec-pulse 1s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-hero-mesh-a,
   .landing-hero-mesh-b,
   .roadmap-dash-animate,
-  .roadmap-node-pulse-ring {
+  .roadmap-node-pulse-ring,
+  .countdown-sec-pulse {
     animation: none !important;
   }
 }

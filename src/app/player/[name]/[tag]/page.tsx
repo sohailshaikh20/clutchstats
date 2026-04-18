@@ -2,23 +2,28 @@ import type { Metadata } from "next";
 import { HenrikApiError, getHenrikClient } from "@/lib/api/henrik";
 import { pageMetadata } from "@/lib/page-metadata";
 import { AgentBreakdown } from "@/components/player/AgentBreakdown";
-import { CoachingCta } from "@/components/player/CoachingCta";
 import { MapPerformance } from "@/components/player/MapPerformance";
 import { MatchHistory } from "@/components/player/MatchHistory";
+import { ModeBreakdownPills } from "@/components/player/ModeBreakdownPills";
+import { PercentileSection } from "@/components/player/PercentileSection";
 import { PlayerNotFound } from "@/components/player/PlayerNotFound";
 import { PlayerPrivacy } from "@/components/player/PlayerPrivacy";
 import { ProfileErrorGeneric } from "@/components/player/ProfileErrorGeneric";
+import { ProfileFooterActions } from "@/components/player/ProfileFooterActions";
 import { ProfileHeader } from "@/components/player/ProfileHeader";
+import { ProfileKdTrendChart, type TrendPoint } from "@/components/player/ProfileKdTrendChart";
 import { PremiumLockedStats } from "@/components/player/PremiumLockedStats";
+import { SecondaryStatsRow } from "@/components/player/SecondaryStatsRow";
 import { StatsOverview } from "@/components/player/StatsOverview";
 import {
   buildPlayerProfilePayload,
   isPrivacyHenrikError,
+  type MatchRow,
 } from "@/lib/player/build-profile-payload";
 import { defaultMmrResponse } from "@/lib/player/default-mmr";
+import { calculatePlayerStats } from "@/lib/stats/calculator";
 import { fetchValorantGameAssets } from "@/lib/valorant/game-assets";
-import type { HenrikMatch } from "@/types/valorant";
-import type { ValorantRegion } from "@/types/valorant";
+import type { HenrikMatch, ValorantRegion } from "@/types/valorant";
 
 function asRegion(r: string): ValorantRegion {
   const x = r.toLowerCase();
@@ -26,6 +31,16 @@ function asRegion(r: string): ValorantRegion {
   if (x === "br" || x === "brazil") return "br";
   if (x === "na" || x === "eu" || x === "ap" || x === "kr") return x;
   return "na";
+}
+
+function buildTrendPoints(matches: MatchRow[]): TrendPoint[] {
+  const nonDm = matches.filter((m) => m.filterQueue !== "deathmatch");
+  const oldest = [...nonDm].sort((a, b) => a.gameStart - b.gameStart).slice(-18);
+  return oldest.map((m, i) => ({
+    i: i + 1,
+    kd: m.kd,
+    acs: m.combatScore > 0 ? m.combatScore : null,
+  }));
 }
 
 export async function generateMetadata({
@@ -106,10 +121,9 @@ export default async function PlayerProfilePage({
     const matches = Array.isArray(matchRes.data) ? matchRes.data : [];
 
     const payload = buildPlayerProfilePayload(account, mmr, matches, assets);
-    const kdHistory = [...payload.matches]
-      .sort((a, b) => a.gameStart - b.gameStart)
-      .slice(-18)
-      .map((m) => m.kd);
+    const rankPatched = mmr.current_data.currenttierpatched ?? null;
+    const statsCalc = calculatePlayerStats(matches, account.puuid, rankPatched);
+    const trendData = buildTrendPoints(payload.matches);
 
     return (
       <div className="min-h-screen bg-background pb-8">
@@ -129,20 +143,32 @@ export default async function PlayerProfilePage({
           peak={payload.peakRank}
         />
 
-        <div className="mx-auto w-full max-w-screen-2xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8 xl:px-10">
+        <div className="mx-auto w-full max-w-screen-2xl space-y-5 px-4 pb-8 pt-5 sm:px-6 lg:px-8 xl:px-10">
           <StatsOverview
             kdRatio={payload.stats.kdRatio}
             winRate={payload.stats.winRate}
             headshotPct={payload.stats.headshotPct}
             avgCombatScore={payload.stats.avgCombatScore}
-            kdHistory={kdHistory}
           />
+          <SecondaryStatsRow
+            avgDamagePerRound={statsCalc.premium.avgDamagePerRound}
+            killsPerRound={statsCalc.premium.killsPerRound}
+            deathsPerRound={statsCalc.premium.deathsPerRound}
+            abilityCastsTotal={statsCalc.premium.abilityCasts?.total ?? null}
+          />
+          <ProfileKdTrendChart data={trendData} />
           <PremiumLockedStats />
         </div>
+
+        <ModeBreakdownPills modes={statsCalc.premium.modeBreakdown} />
         <MatchHistory matches={payload.matches} />
+        <PercentileSection
+          data={statsCalc.premium.performancePercentile}
+          rankPatched={statsCalc.premium.rankName}
+        />
         <AgentBreakdown agents={payload.agents} />
         <MapPerformance maps={payload.maps} />
-        <CoachingCta />
+        <ProfileFooterActions riotName={payload.riotName} riotTag={payload.riotTag} />
       </div>
     );
   } catch (e) {

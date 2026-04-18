@@ -16,7 +16,7 @@ import type {
 } from "@/types/valorant";
 import { getPlayerFromMatch } from "./match-utils";
 
-export type QueueFilter = "competitive" | "unrated" | "all";
+export type QueueFilter = "competitive" | "unrated" | "deathmatch" | "all";
 
 export type MatchRow = {
   matchId: string;
@@ -28,7 +28,7 @@ export type MatchRow = {
   /** CSS rgba for ring around agent portrait */
   agentRoleRing: string;
   queueLabel: string;
-  filterQueue: "competitive" | "unrated" | "other";
+  filterQueue: "competitive" | "unrated" | "deathmatch" | "other";
   won: boolean;
   teamRounds: number;
   oppRounds: number;
@@ -106,8 +106,12 @@ const REGION_FLAGS: Record<string, string> = {
   br: "🇧🇷",
 };
 
-function classifyQueue(queue: string, mode: string): "competitive" | "unrated" | "other" {
+function classifyQueue(
+  queue: string,
+  mode: string
+): "competitive" | "unrated" | "deathmatch" | "other" {
   const q = `${queue || ""} ${mode || ""}`.toLowerCase();
+  if (q.includes("deathmatch")) return "deathmatch";
   if (q.includes("competitive") || q.includes("ranked") || q.includes("premier")) {
     return "competitive";
   }

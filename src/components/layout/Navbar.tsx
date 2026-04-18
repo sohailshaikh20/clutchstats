@@ -35,8 +35,11 @@ function isNavActive(pathname: string, href: string) {
 
 function navLinkClass(active: boolean) {
   return [
-    "font-heading text-sm font-semibold uppercase tracking-wide transition-colors",
-    active ? "text-accent-red" : "text-text-secondary hover:text-text-primary",
+    "relative inline-flex pb-1 font-heading text-sm font-semibold uppercase tracking-wide transition-colors",
+    "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:rounded-full after:bg-accent-red after:transition-opacity",
+    active
+      ? "text-accent-red after:opacity-100"
+      : "text-text-secondary after:opacity-0 hover:text-text-primary hover:after:opacity-40",
   ].join(" ");
 }
 
@@ -143,7 +146,7 @@ export function Navbar() {
                     onChange={(e) => setNavSearchQ(e.target.value)}
                     placeholder="Name#TAG"
                     autoComplete="off"
-                    className="h-10 w-full rounded-full border border-transparent bg-surface py-2 pl-10 pr-4 font-body text-sm text-text-primary outline-none ring-0 transition-[border-color,box-shadow] placeholder:text-text-secondary/80 focus:border-accent-red/40 focus:shadow-glow-red"
+                    className="h-11 min-h-[44px] w-full rounded-full border border-transparent bg-surface py-2 pl-10 pr-4 font-body text-sm text-text-primary outline-none ring-0 transition-[border-color,box-shadow] placeholder:text-text-secondary/80 focus:border-accent-red/40 focus:shadow-glow-red sm:h-10 sm:min-h-0"
                   />
                 </label>
               </form>

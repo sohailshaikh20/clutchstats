@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, Rajdhani } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
+import { PageFadeIn } from "@/components/layout/PageFadeIn";
 import "./globals.css";
 
 const fontHeading = Rajdhani({
@@ -22,13 +23,13 @@ const siteUrl = "https://clutchstats.gg";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "ClutchStats.gg — Competitive Gaming Stats, Esports & AI Coaching",
+  title: "ClutchStats.gg — Valorant Stats, Esports & Squad Finder",
   description:
-    "Premium competitive gaming stats for Valorant and more — esports coverage, roadmaps, squad finder, and AI coaching.",
+    "Premium Valorant player stats, VCT esports coverage, roadmaps, and rank-verified squad finder on ClutchStats.gg.",
   openGraph: {
-    title: "ClutchStats.gg — Competitive Gaming Stats, Esports & AI Coaching",
+    title: "ClutchStats.gg — Valorant Stats, Esports & Squad Finder",
     description:
-      "Premium competitive gaming stats for Valorant and more — esports coverage, roadmaps, squad finder, and AI coaching.",
+      "Premium Valorant player stats, VCT esports coverage, roadmaps, and rank-verified squad finder on ClutchStats.gg.",
     url: siteUrl,
     siteName: "ClutchStats.gg",
     locale: "en_US",
@@ -44,9 +45,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ClutchStats.gg — Competitive Gaming Stats, Esports & AI Coaching",
+    title: "ClutchStats.gg — Valorant Stats, Esports & Squad Finder",
     description:
-      "Premium competitive gaming stats for Valorant and more — esports coverage, roadmaps, squad finder, and AI coaching.",
+      "Premium Valorant player stats, VCT esports coverage, roadmaps, and rank-verified squad finder on ClutchStats.gg.",
     images: ["/opengraph-image"],
   },
 };
@@ -71,7 +72,9 @@ export default function RootLayout({
       <body className="font-body">
         <div className="relative z-10 flex min-h-screen flex-col">
           <Navbar />
-          <main className="min-w-0 flex-1 overflow-x-clip pb-[4.75rem] md:pb-0">{children}</main>
+          <main className="min-w-0 flex-1 overflow-x-clip pb-[4.75rem] md:pb-0">
+            <PageFadeIn>{children}</PageFadeIn>
+          </main>
           <Footer />
         </div>
       </body>

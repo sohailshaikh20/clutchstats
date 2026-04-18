@@ -399,21 +399,12 @@ export function MatchDetailClient({ matchId }: { matchId: string }) {
                 href={s.vodUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg border border-accent-red/40 bg-accent-red/10 px-4 py-2 font-heading text-xs font-bold uppercase tracking-wide text-accent-red transition hover:bg-accent-red/20"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-accent-red/40 bg-accent-red/10 px-4 py-2 font-heading text-xs font-bold uppercase tracking-wide text-accent-red transition hover:bg-accent-red/20"
               >
                 Watch VOD
                 <ExternalLink className="size-3.5" />
               </a>
             ) : null}
-            <a
-              href={`https://www.vlr.gg/${matchId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-body text-xs text-text-secondary transition hover:text-accent-blue"
-            >
-              Open on VLR
-              <ExternalLink className="size-3" />
-            </a>
           </div>
         </div>
       </header>
