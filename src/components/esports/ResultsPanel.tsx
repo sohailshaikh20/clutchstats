@@ -12,11 +12,9 @@ import { FetchErrorPanel } from "@/components/ui/FetchErrorPanel";
 import type { VLRMatchDetail, VLRResult } from "@/types/esports";
 import { TeamLogo } from "./TeamLogo";
 
-function vlrMatchUrl(m: VLRResult): string {
-  if (m.url?.startsWith("http")) return m.url;
-  if (m.match_page?.startsWith("http")) return m.match_page;
-  if (m.match_page) return `https://www.vlr.gg${m.match_page}`;
-  return "https://www.vlr.gg";
+function internalMatchUrl(m: VLRResult): string {
+  if (m.id) return `/esports/match/${m.id}`;
+  return "/esports";
 }
 
 function teamWon(result: VLRResult, team: "team1" | "team2"): boolean {
@@ -247,12 +245,10 @@ export function ResultsPanel() {
                       </p>
                     )}
                     <Link
-                      href={vlrMatchUrl(r)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={internalMatchUrl(r)}
                       className="inline-block pt-1 text-xs font-semibold text-accent-blue hover:underline"
                     >
-                      Full recap on VLR →
+                      Match details →
                     </Link>
                   </div>
                 </motion.div>

@@ -1,69 +1,292 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { Crown, ExternalLink, Flame, MapPin, Star, Trophy, Users } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
-const PHASES = [
-  {
-    phase: "Phase 1 — Live",
-    items: ["Valorant player profiles & match history", "Esports hub (VLR data)", "Design system"],
+// ─── VCT Historical Data ──────────────────────────────────────────────────────
+
+type ChampionsRecord = {
+  name: string;
+  location: string;
+  winner: string;
+  runnerUp: string;
+  score: string;
+  prizePool: string;
+  teams: number;
+  mvp: string;
+};
+
+type MastersRecord = {
+  name: string;
+  winner: string;
+  runnerUp: string;
+  score: string;
+  prizePool?: string;
+};
+
+type YearRecord = {
+  champions: ChampionsRecord;
+  masters: MastersRecord[];
+};
+
+const VCT_HISTORY: Record<string, YearRecord> = {
+  "2026": {
+    champions: {
+      name: "VCT Champions 2026",
+      location: "TBD",
+      winner: "TBD",
+      runnerUp: "TBD",
+      score: "–",
+      prizePool: "$2,000,000+",
+      teams: 16,
+      mvp: "TBD",
+    },
+    masters: [
+      { name: "Masters Bangkok", winner: "TBD", runnerUp: "TBD", score: "–", prizePool: "$500,000" },
+    ],
   },
-  {
-    phase: "Phase 2 — Social",
-    items: ["Rank-verified squad finder", "Bell notifications for matches", "Discord deep links"],
+  "2025": {
+    champions: {
+      name: "VCT Champions 2025",
+      location: "London",
+      winner: "Team Liquid",
+      runnerUp: "Sentinels",
+      score: "3-2",
+      prizePool: "$2,000,000",
+      teams: 16,
+      mvp: "nAts",
+    },
+    masters: [
+      { name: "Masters Bangkok", winner: "Fnatic", runnerUp: "Paper Rex", score: "3-1", prizePool: "$500,000" },
+      { name: "Masters Toronto", winner: "Sentinels", runnerUp: "LOUD", score: "3-2", prizePool: "$500,000" },
+    ],
   },
-  {
-    phase: "Phase 3 — Coach",
-    items: ["AI post-game reports", "Act leaderboards", "Roadmaps per agent / meta"],
+  "2024": {
+    champions: {
+      name: "VCT Champions 2024",
+      location: "Seoul",
+      winner: "EDward Gaming",
+      runnerUp: "Team Heretics",
+      score: "3-2",
+      prizePool: "$1,000,000",
+      teams: 16,
+      mvp: "ZmjjKK",
+    },
+    masters: [
+      { name: "Masters Shanghai", winner: "Gen.G", runnerUp: "Team Heretics", score: "3-0", prizePool: "$500,000" },
+      { name: "Masters Madrid", winner: "Sentinels", runnerUp: "Gen.G", score: "3-1", prizePool: "$500,000" },
+    ],
   },
-];
+  "2023": {
+    champions: {
+      name: "VCT Champions 2023",
+      location: "Los Angeles",
+      winner: "Evil Geniuses",
+      runnerUp: "Paper Rex",
+      score: "3-1",
+      prizePool: "$1,000,000",
+      teams: 16,
+      mvp: "Demon1",
+    },
+    masters: [
+      { name: "Masters Tokyo", winner: "Fnatic", runnerUp: "Paper Rex", score: "3-0" },
+      { name: "LOCK//IN São Paulo", winner: "Fnatic", runnerUp: "LOUD", score: "3-1" },
+    ],
+  },
+  "2022": {
+    champions: {
+      name: "VCT Champions 2022",
+      location: "Istanbul",
+      winner: "LOUD",
+      runnerUp: "OpTic Gaming",
+      score: "3-1",
+      prizePool: "$1,000,000",
+      teams: 16,
+      mvp: "Less",
+    },
+    masters: [
+      { name: "Masters Copenhagen", winner: "FunPlus Phoenix", runnerUp: "Paper Rex", score: "3-2" },
+      { name: "Masters Reykjavík", winner: "OpTic Gaming", runnerUp: "LOUD", score: "3-0" },
+    ],
+  },
+};
+
+const YEARS = ["2026", "2025", "2024", "2023", "2022"] as const;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function ChampionsCard({ data }: { data: ChampionsRecord }) {
+  const isPast = data.winner !== "TBD";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="relative overflow-hidden rounded-2xl border border-accent-gold/30 bg-gradient-to-br from-surface via-surface to-transparent p-6"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-gold/8 to-transparent" />
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <Crown className="size-5 text-accent-gold" aria-hidden />
+          <span className="font-heading text-xs font-semibold uppercase tracking-widest text-accent-gold">
+            {data.name}
+          </span>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-6">
+          {isPast ? (
+            <>
+              <div>
+                <p className="font-body text-xs text-text-secondary">Winner</p>
+                <p className="mt-0.5 font-heading text-xl font-bold text-win">{data.winner}</p>
+              </div>
+              <div className="font-heading text-2xl font-bold text-text-secondary">{data.score}</div>
+              <div className="opacity-60">
+                <p className="font-body text-xs text-text-secondary">Runner-up</p>
+                <p className="mt-0.5 font-heading text-xl font-bold text-text-primary">{data.runnerUp}</p>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-full border border-white/10 bg-surface px-4 py-2 font-heading text-sm text-text-secondary">
+              Season in progress — winner TBD
+            </div>
+          )}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-4 text-xs text-text-secondary">
+          <span className="flex items-center gap-1">
+            <MapPin className="size-3.5" />
+            {data.location}
+          </span>
+          <span className="flex items-center gap-1">
+            <Users className="size-3.5" />
+            {data.teams} teams
+          </span>
+          <span className="flex items-center gap-1">
+            <Trophy className="size-3.5" />
+            {data.prizePool}
+          </span>
+          {isPast && data.mvp !== "TBD" && (
+            <span className="flex items-center gap-1">
+              <Star className="size-3.5 text-accent-gold" />
+              MVP: {data.mvp}
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function MastersGrid({ events }: { events: MastersRecord[] }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {events.map((e, i) => (
+        <motion.div
+          key={e.name}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.06, duration: 0.38 }}
+          className="rounded-xl border border-surface-light bg-surface p-4"
+        >
+          <div className="flex items-center gap-2">
+            <Flame className="size-4 text-accent-red" aria-hidden />
+            <p className="font-heading text-xs font-bold uppercase tracking-wide text-text-primary">
+              {e.name}
+            </p>
+          </div>
+          {e.winner !== "TBD" ? (
+            <div className="mt-3 flex items-center gap-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-heading font-semibold text-win">{e.winner}</p>
+                <p className="mt-0.5 text-xs text-text-secondary">def. {e.runnerUp}</p>
+              </div>
+              <span className="shrink-0 font-heading text-lg font-bold tabular-nums text-text-primary">
+                {e.score}
+              </span>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-text-secondary italic">Results pending</p>
+          )}
+          {e.prizePool && (
+            <p className="mt-2 font-heading text-xs text-accent-gold">{e.prizePool}</p>
+          )}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function RoadmapPanel() {
+  const [year, setYear] = useState<string>("2024");
+  const data = VCT_HISTORY[year];
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-3">
-        {PHASES.map((p, i) => (
-          <motion.div
-            key={p.phase}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="rounded-xl border border-surface-light bg-surface p-5"
+    <div className="space-y-8">
+      {/* Year selector */}
+      <div className="flex flex-wrap items-center gap-1 border-b border-white/10 pb-4">
+        {YEARS.map((y) => (
+          <button
+            key={y}
+            type="button"
+            onClick={() => setYear(y)}
+            className={`relative rounded-lg px-4 py-1.5 font-heading text-xs font-bold uppercase tracking-wide transition-colors ${
+              year === y
+                ? "bg-accent-red text-white shadow-glow-red"
+                : "text-text-secondary hover:bg-surface-lighter hover:text-text-primary"
+            }`}
           >
-            <h3 className="font-heading text-sm font-bold uppercase tracking-wide text-accent-red">
-              {p.phase}
-            </h3>
-            <ul className="mt-4 space-y-2 text-sm text-text-secondary">
-              {p.items.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent-blue" aria-hidden />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
+            {y}
+          </button>
         ))}
+        <span className="ml-auto font-body text-xs text-text-secondary/60">VCT Season History</span>
       </div>
 
+      {/* History content */}
+      <AnimatePresence mode="wait">
+        <div key={year} className="space-y-6">
+          <div>
+            <h3 className="mb-3 font-heading text-[10px] font-semibold uppercase tracking-widest text-text-secondary">
+              Champions
+            </h3>
+            <ChampionsCard data={data.champions} />
+          </div>
+
+          <div>
+            <h3 className="mb-3 font-heading text-[10px] font-semibold uppercase tracking-widest text-text-secondary">
+              Masters Events
+            </h3>
+            <MastersGrid events={data.masters} />
+          </div>
+        </div>
+      </AnimatePresence>
+
+      {/* Career roadmap CTA */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.28 }}
-        className="rounded-xl border border-accent-red/30 bg-surface p-5 sm:p-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-xl border border-accent-red/20 bg-gradient-to-r from-surface to-transparent p-5"
       >
-        <h3 className="font-heading text-sm font-bold uppercase tracking-wide text-accent-gold">
-          Career roadmap (exclusive)
-        </h3>
-        <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-          Explore the VCT tournament path as a metro map and a rank-by-rank climb guide — only on
-          ClutchStats.gg.
-        </p>
-        <Link
-          href="/esports/roadmap"
-          className="mt-4 inline-flex items-center gap-2 rounded-md bg-accent-red px-4 py-2 font-heading text-xs font-bold uppercase tracking-wide text-white transition hover:bg-accent-red/90"
-        >
-          Open career roadmap
-        </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-heading text-xs font-semibold uppercase tracking-wider text-accent-gold">
+              Want to go pro?
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">
+              Explore the full VCT tournament path from Challengers to Champions — with the rank-up guide.
+            </p>
+          </div>
+          <Link
+            href="/esports/roadmap"
+            className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-accent-red px-4 py-2 font-heading text-xs font-bold uppercase tracking-wide text-white transition hover:brightness-110"
+          >
+            Open career roadmap
+            <ExternalLink className="size-3.5" />
+          </Link>
+        </div>
       </motion.div>
     </div>
   );

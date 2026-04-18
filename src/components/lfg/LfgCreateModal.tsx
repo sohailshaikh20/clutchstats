@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { henrikTierToRankKey, RANK_KEYS, rankLabel } from "@/lib/lfg/ranks";
 import type { User } from "@supabase/supabase-js";
 import { AnimatePresence, motion } from "framer-motion";
@@ -71,30 +70,39 @@ export function LfgCreateModal({
     }
     setSubmitting(true);
     setError(null);
-    const supabase = createClient();
-    const row = {
-      user_id: user.id,
-      rank,
-      agents: picked,
-      region: region as "eu" | "na" | "ap" | "kr" | "latam" | "br",
-      playstyle,
-      description: description.slice(0, 200) || null,
-      available_from: timeFrom ? `${timeFrom}:00` : null,
-      available_to: timeTo ? `${timeTo}:00` : null,
-      is_active: true,
-    };
-    const { error: e } = await supabase.from("lfg_posts").insert(row);
-    setSubmitting(false);
-    if (e) {
-      setError(e.message);
-      return;
+
+    try {
+      const res = await fetch("/api/lfg/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rank,
+          agents: picked,
+          region,
+          playstyle,
+          description: description.slice(0, 300) || null,
+          available_from: timeFrom ? `${timeFrom}:00` : null,
+          available_to: timeTo ? `${timeTo}:00` : null,
+        }),
+      });
+
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(json.error ?? "Failed to post. Please try again.");
+        return;
+      }
+
+      onPosted();
+      onClose();
+      setDescription("");
+      setPicked([]);
+      setTimeFrom("");
+      setTimeTo("");
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    onPosted();
-    onClose();
-    setDescription("");
-    setPicked([]);
-    setTimeFrom("");
-    setTimeTo("");
   }, [user, picked, rank, region, playstyle, description, timeFrom, timeTo, onPosted, onClose]);
 
   return (

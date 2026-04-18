@@ -14,6 +14,7 @@ import type { VLREvent } from "@/types/esports";
 type EventExt = VLREvent & { teams?: number; team_count?: number };
 
 function eventUrl(e: VLREvent): string {
+  // Link to external VLR for events (no internal event detail page yet)
   if (e.url?.startsWith("http")) return e.url;
   return `https://www.vlr.gg${e.url ?? ""}`;
 }

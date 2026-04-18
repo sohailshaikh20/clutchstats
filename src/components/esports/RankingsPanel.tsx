@@ -2,19 +2,15 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowDown, ArrowUp, ListOrdered, Minus } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import {
-  fetchVlrProxy,
-  unwrapSegments,
-} from "@/lib/esports/vlr-client-fetch";
 import { FetchErrorPanel } from "@/components/ui/FetchErrorPanel";
 import type { VLRRanking, VLRRegion } from "@/types/esports";
 import { TeamLogo } from "./TeamLogo";
+import { TEAM_LOGOS } from "@/lib/constants/team-logos";
 
 const SUB: { id: string; label: string; region: VLRRegion }[] = [
-  { id: "emea", label: "EMEA", region: "eu" },
   { id: "americas", label: "Americas", region: "na" },
+  { id: "emea", label: "EMEA", region: "eu" },
   { id: "pacific", label: "Pacific", region: "ap" },
   { id: "china", label: "China", region: "cn" },
 ];
@@ -46,26 +42,20 @@ export function RankingsPanel() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(false);
 
-  const load = useCallback(async (region: VLRRegion) => {
-    const raw = await fetchVlrProxy<unknown>(`/rankings?region=${region}`);
-    return unwrapSegments<VLRRanking>(raw);
-  }, []);
-
   const fetchRows = useCallback(async () => {
     setLoading(true);
     setErr(false);
     try {
-      let list = await load(sub.region);
-      if (list.length === 0 && sub.region === "cn") {
-        list = await load("world");
-      }
-      setRows(list);
+      const res = await fetch(`/api/esports/rankings?region=${sub.region}`);
+      if (!res.ok) throw new Error("bad status");
+      const json = (await res.json()) as { rows?: VLRRanking[] };
+      setRows(json.rows ?? []);
     } catch {
       setErr(true);
     } finally {
       setLoading(false);
     }
-  }, [load, sub.region]);
+  }, [sub.region]);
 
   useEffect(() => {
     void fetchRows();
@@ -120,14 +110,14 @@ export function RankingsPanel() {
         <div className="mt-6 rounded-2xl border border-dashed border-white/15 bg-surface/80 px-6 py-12 text-center">
           <ListOrdered className="mx-auto size-10 text-text-secondary" aria-hidden />
           <p className="mt-4 font-heading text-sm font-bold uppercase tracking-wide text-text-primary">
-            No rankings for {sub.label}
+            No data for {sub.label}
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
-            The API didn’t return rows for this region yet. Switch regions above or retry in a few
-            minutes.
+            No {sub.label} matches found in the recent results feed. Try another region or check back after the next event day.
           </p>
         </div>
       ) : (
+        <div>
         <div className="mt-4 overflow-x-auto rounded-xl border border-surface-light bg-surface">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
@@ -152,21 +142,16 @@ export function RankingsPanel() {
                       {row.rank}
                     </td>
                     <td className="px-3 py-3">
-                      <Link
-                        href={
-                          row.team.url?.startsWith("http")
-                            ? row.team.url
-                            : `https://www.vlr.gg${row.team.url || "/"}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex min-w-0 items-center gap-2 hover:text-accent-red"
-                      >
-                        <TeamLogo name={row.team.name} logoUrl={row.team.logo} size={32} />
+                      <div className="flex min-w-0 items-center gap-2">
+                        <TeamLogo
+                          name={row.team.name}
+                          logoUrl={TEAM_LOGOS[row.team.name] ?? row.team.logo}
+                          size={32}
+                        />
                         <span className="min-w-0 font-heading font-semibold text-text-primary">
                           {row.team.name}
                         </span>
-                      </Link>
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-right font-heading text-base font-bold tabular-nums text-text-primary">
                       {row.points}
@@ -208,6 +193,10 @@ export function RankingsPanel() {
               })}
             </tbody>
           </table>
+        </div>
+        <p className="mt-3 text-right font-body text-[10px] text-text-secondary/50">
+          Standings computed from recent match results · Updated every 5 min
+        </p>
         </div>
       )}
     </div>

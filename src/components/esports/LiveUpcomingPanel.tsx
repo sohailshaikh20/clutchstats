@@ -26,11 +26,9 @@ function formatLocal(unix: number | null): string {
   }).format(new Date(ms));
 }
 
-function vlrMatchUrl(m: VLRMatch): string {
-  if (m.url?.startsWith("http")) return m.url;
-  if (m.match_page?.startsWith("http")) return m.match_page;
-  if (m.match_page) return `https://www.vlr.gg${m.match_page}`;
-  return "https://www.vlr.gg";
+function internalMatchUrl(m: VLRMatch): string {
+  if (m.id) return `/esports/match/${m.id}`;
+  return "/esports";
 }
 
 export function LiveUpcomingPanel() {
@@ -104,12 +102,10 @@ export function LiveUpcomingPanel() {
           VLR for the full schedule.
         </p>
         <Link
-          href="https://www.vlr.gg"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/esports"
           className="mt-6 inline-flex font-semibold text-accent-blue underline-offset-4 hover:underline"
         >
-          Browse VLR.gg →
+          Back to Esports Hub →
         </Link>
       </div>
     );
@@ -168,12 +164,10 @@ export function LiveUpcomingPanel() {
             ) : null}
           </div>
           <Link
-            href={vlrMatchUrl(featured)}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={internalMatchUrl(featured)}
             className="relative mt-4 inline-block text-xs font-semibold text-accent-blue hover:underline"
           >
-            Watch on VLR →
+            Match details →
           </Link>
         </motion.div>
       ) : null}
@@ -204,9 +198,7 @@ export function LiveUpcomingPanel() {
               >
                 <div className="flex rounded-xl border border-surface-light bg-surface p-4 transition-[border-color,transform] hover:border-white/15 hover:shadow-md">
                   <Link
-                    href={vlrMatchUrl(m)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={internalMatchUrl(m)}
                     className="min-w-0 flex-1 space-y-3"
                   >
                     <span className="inline-block max-w-full truncate rounded-full border border-white/10 bg-background/60 px-2 py-0.5 text-[10px] font-heading font-semibold uppercase tracking-wide text-text-secondary">
