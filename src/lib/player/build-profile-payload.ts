@@ -69,6 +69,8 @@ export type PlayerProfilePayload = {
   regionFlag: string;
   accountLevel: number;
   cardWide: string;
+  /** Riot playercard small art (Henrik). */
+  cardSmall: string;
   puuid: string;
   currentRank: {
     name: string;
@@ -361,6 +363,7 @@ export function buildPlayerProfilePayload(
     regionFlag,
     accountLevel: account.account_level,
     cardWide: account.card.wide,
+    cardSmall: account.card.small,
     puuid,
     currentRank: {
       name: cur.currenttierpatched || getRankByTier(cur.currenttier).name,

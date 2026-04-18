@@ -163,7 +163,7 @@ export default async function PlayerProfilePage({
         </section>
 
         <section id="matches" className="scroll-mt-[120px]">
-          <MatchHistory matches={matchRowsToMatches(payload.matches)} />
+          <MatchHistory matches={matchRowsToMatches(payload.matches, matches, account.puuid)} />
         </section>
 
         <AgentsTable agents={agentsData} />

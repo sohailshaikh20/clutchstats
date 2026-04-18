@@ -3,6 +3,7 @@
 import { HelpCircle } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useMemo } from "react";
+import { inferDirection } from "@/lib/trend";
 
 function sparklinePath(values: number[], w: number, h: number): { d: string; areaD: string } {
   if (values.length < 2) {
@@ -64,7 +65,8 @@ export function StatPill({
     [stat.trend]
   );
   const { d, areaD } = useMemo(() => sparklinePath(trend, w, h), [trend, w, h]);
-  const stroke = strokeForDirection(stat.trendDirection);
+  const strokeDir = variant === "clutch" ? stat.trendDirection : inferDirection(trend);
+  const stroke = strokeForDirection(strokeDir);
   const elite = stat.percentile >= 90;
   const fillPct = Math.min(100, Math.max(0, stat.percentile));
   const topLabel = (100 - stat.percentile).toFixed(1);
@@ -128,8 +130,8 @@ export function StatPill({
           <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
             <defs>
               <linearGradient id={`fill-${stat.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={stroke} stopOpacity="0.22" />
-                <stop offset="100%" stopColor={stroke} stopOpacity="0.02" />
+                <stop offset="0%" stopColor={stroke} stopOpacity="0.18" />
+                <stop offset="100%" stopColor={stroke} stopOpacity="0.03" />
               </linearGradient>
             </defs>
             <motion.path
@@ -142,7 +144,7 @@ export function StatPill({
               d={d}
               fill="none"
               stroke={stroke}
-              strokeWidth={1.5}
+              strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
               initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
@@ -162,7 +164,7 @@ export function StatPill({
                   <motion.circle
                     cx={0}
                     cy={0}
-                    r={3}
+                    r={2.5}
                     fill={stroke}
                     initial={reduced ? false : { scale: 0 }}
                     animate={{ scale: 1 }}
@@ -172,12 +174,12 @@ export function StatPill({
                     <motion.circle
                       cx={0}
                       cy={0}
-                      r={3}
+                      r={2.5}
                       fill="none"
                       stroke={stroke}
                       strokeWidth={2}
                       initial={{ scale: 1, opacity: 0.6 }}
-                      animate={{ scale: 2.2, opacity: 0 }}
+                      animate={{ scale: 3, opacity: 0 }}
                       transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
                     />
                   ) : null}

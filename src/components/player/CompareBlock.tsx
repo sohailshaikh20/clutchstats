@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useId, useMemo, useState } from "react";
+import { formatStat } from "@/lib/format";
 
 export interface CompareRow {
   label: string;
@@ -18,8 +19,24 @@ export interface CompareBlockProps {
   rows: CompareRow[];
 }
 
-const CURVE_PATH = "M 0 48 Q 100 48 200 8 Q 300 48 400 48";
-const CURVE_AREA = `${CURVE_PATH} L 400 56 L 0 56 Z`;
+const CURVE_PATH = "M 0 64 Q 100 64 200 24 Q 300 64 400 64";
+const CURVE_AREA = `${CURVE_PATH} L 400 72 L 0 72 Z`;
+
+function formatPinLabel(row: CompareRow): string {
+  const v = row.value.trim();
+  if (v.endsWith("%")) {
+    const n = parseFloat(v);
+    if (Number.isFinite(n)) return `${n.toFixed(1)}%`;
+    return v;
+  }
+  if (/acs|combat score/i.test(row.label)) {
+    const n = parseFloat(v.replace(/,/g, ""));
+    if (Number.isFinite(n)) return String(Math.round(n));
+  }
+  const n = parseFloat(v.replace(/,/g, ""));
+  if (Number.isFinite(n)) return formatStat(n, "number");
+  return v;
+}
 
 function mapRange(v: number, min: number, max: number, outMin: number, outMax: number): number {
   if (max === min) return (outMin + outMax) / 2;
@@ -82,8 +99,8 @@ function CompareCurveSvg({
 
   return (
     <svg
-      className="h-14 w-full"
-      viewBox="0 0 400 56"
+      className="h-[72px] w-full"
+      viewBox="0 0 400 72"
       preserveAspectRatio="none"
       aria-hidden
     >
@@ -100,8 +117,8 @@ function CompareCurveSvg({
         <line
           x1={mx}
           x2={mx}
-          y1={4}
-          y2={54}
+          y1={20}
+          y2={70}
           stroke="rgba(255,255,255,0.3)"
           strokeWidth={1}
           strokeDasharray="2 4"
@@ -115,19 +132,20 @@ function CompareCurveSvg({
           ease: [0.22, 1, 0.36, 1],
           delay: reduced ? 0 : pinDelay,
         }}
-        style={{ transformOrigin: `${px}px 18px`, transformBox: "fill-box" as const }}
+        style={{ transformOrigin: `${px}px 34px`, transformBox: "fill-box" as const }}
       >
         <text
           x={px}
-          y={6}
+          y={20}
           textAnchor="middle"
+          dominantBaseline="auto"
           fill="#FF4655"
           style={{ fontFamily: "var(--font-mono-display), ui-monospace, monospace", fontSize: 10, fontWeight: 700 }}
         >
-          {row.value}
+          {formatPinLabel(row)}
         </text>
-        <path d={`M ${px - 4} 10 L ${px + 4} 10 L ${px} 18 Z`} fill="#FF4655" />
-        <line x1={px} x2={px} y1={18} y2={52} stroke="#FF4655" strokeWidth={2} />
+        <path d={`M ${px - 4} 26 L ${px + 4} 26 L ${px} 34 Z`} fill="#FF4655" />
+        <line x1={px} x2={px} y1={34} y2={68} stroke="#FF4655" strokeWidth={2} />
       </motion.g>
     </svg>
   );
@@ -163,7 +181,7 @@ function CompareStatRow({
         <p className="mt-0.5 font-mono-display text-xs text-white/50">{row.value}</p>
       </div>
 
-      <div className="min-h-[56px] w-full min-w-0">
+      <div className="min-h-[72px] w-full min-w-0">
         <CompareCurveSvg row={row} reduced={reduced} pinDelay={pinDelay} />
       </div>
 

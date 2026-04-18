@@ -4,6 +4,8 @@ import { Lock } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
+import { InfoTip } from "@/components/ui/InfoTip";
+import { inferDirection } from "@/lib/trend";
 
 export interface PerformanceStat {
   key: string;
@@ -12,6 +14,8 @@ export interface PerformanceStat {
   format?: "number" | "percent" | "integer";
   percentile: number;
   tierAverage?: number;
+  /** 99th-percentile style reference in-tier (TODO: backend). */
+  tierTop1Pct?: number;
   rawValue?: number;
   trend?: number[];
   delta?: number;
@@ -27,29 +31,22 @@ export interface PerformanceGridProps {
 }
 
 const TIME_RANGES = ["Last 20", "Last Act", "All Time"] as const;
+type PeerMode = "tierAvg" | "top1";
 
-function linearSlope(values: number[]): number {
-  const n = values.length;
-  if (n < 2) return 0;
-  const meanX = (n - 1) / 2;
-  const meanY = values.reduce((a, b) => a + b, 0) / n;
-  let num = 0;
-  let den = 0;
-  for (let i = 0; i < n; i++) {
-    const xi = i;
-    num += (xi - meanX) * (values[i] - meanY);
-    den += (xi - meanX) ** 2;
-  }
-  return den === 0 ? 0 : num / den;
-}
-
-function trendDirection(values: number[]): "up" | "down" | "flat" {
-  if (values.length < 2) return "flat";
-  const s = linearSlope(values);
-  if (s > 1e-6) return "up";
-  if (s < -1e-6) return "down";
-  return "flat";
-}
+const TIPS: Record<string, string> = {
+  kd: "Kills divided by deaths. Above 1.0 = more kills than deaths per match.",
+  acs: "Riot's in-game score weighing kills, damage, and round impact. Top players sit at 220+.",
+  adr: "Average damage dealt per round. 150+ is solid at Radiant level.",
+  hs: "Percentage of shots that landed on the head. Top-tier aim is 30%+.",
+  kast: "Rounds where you got a Kill, Assist, Survived, or were Traded. Measures round contribution.",
+  fb: "Total rounds where you scored the first kill. Raw opener count.",
+  kpr: "Average kills per round. 0.8+ is high impact.",
+  dpr: "Average deaths per round. LOWER is better — 0.65 or below is elite.",
+  dda: "Damage Dealt vs Absorbed delta. Positive means you trade favorably.",
+  econ: "Average damage per 1000 credits of your loadout. Rewards pistol round impact.",
+  multi: "Total rounds with 3+ kills (3K/4K/5K).",
+  clutch: "Percentage of 1vX situations you won.",
+};
 
 function sparkPath(values: number[], w: number, h: number): { d: string; areaD: string } {
   if (values.length < 2) {
@@ -79,11 +76,11 @@ function strokeFor(dir: "up" | "down" | "flat"): string {
 function PerformanceTile({
   stat,
   isProUser,
-  tierLabel,
+  peerMode,
 }: {
   stat: PerformanceStat;
   isProUser: boolean;
-  tierLabel: string;
+  peerMode: PeerMode;
 }) {
   const reduced = Boolean(useReducedMotion());
   const router = useRouter();
@@ -95,12 +92,12 @@ function PerformanceTile({
     () => (stat.trend && stat.trend.length >= 2 ? stat.trend : []),
     [stat.trend]
   );
-  const dir = trendDirection(trend);
+  const dir = inferDirection(trend);
   const stroke = strokeFor(dir);
   const { d, areaD } = useMemo(() => sparkPath(trend, w, h), [trend, w, h]);
 
   const raw = stat.rawValue;
-  const tier = stat.tierAverage;
+  const tier = peerMode === "top1" ? stat.tierTop1Pct : stat.tierAverage;
   let barPct = 0;
   let relPct = 0;
   let barTone: "up" | "down" | "flat" = "flat";
@@ -121,6 +118,9 @@ function PerformanceTile({
   const deltaTone = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
   const deltaArrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "—";
 
+  const tip = TIPS[stat.key] ?? "";
+  const vsLabel = peerMode === "top1" ? "TOP 1%" : "RADIANT AVG";
+
   const inner = (
     <>
       <span
@@ -128,8 +128,13 @@ function PerformanceTile({
         aria-hidden
       />
       <div className="flex items-start justify-between gap-2 pr-1">
-        <span className="font-mono-display text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">
+        <span className="flex items-center gap-1 font-mono-display text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">
           {stat.label}
+          {tip ? (
+            <InfoTip>
+              <span>{tip}</span>
+            </InfoTip>
+          ) : null}
         </span>
         <div className="flex shrink-0 items-center gap-2">
           {stat.isHighlight ? (
@@ -158,16 +163,35 @@ function PerformanceTile({
           <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
             <defs>
               <linearGradient id={`pg-${gid}-${stat.key}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={stroke} stopOpacity="0.12" />
-                <stop offset="100%" stopColor={stroke} stopOpacity="0.02" />
+                <stop offset="0%" stopColor={stroke} stopOpacity="0.18" />
+                <stop offset="100%" stopColor={stroke} stopOpacity="0.03" />
               </linearGradient>
             </defs>
             <path d={areaD} fill={`url(#pg-${gid}-${stat.key})`} />
+            {(() => {
+              const min = Math.min(...trend);
+              const max = Math.max(...trend);
+              const span = max - min || 1;
+              const pad = 2;
+              const midVal = (min + max) / 2;
+              const midY = pad + (1 - (midVal - min) / span) * (h - pad * 2);
+              return (
+                <line
+                  x1={pad}
+                  x2={w - pad}
+                  y1={midY}
+                  y2={midY}
+                  stroke="rgba(255,255,255,0.08)"
+                  strokeWidth={1}
+                  strokeDasharray="1 3"
+                />
+              );
+            })()}
             <motion.path
               d={d}
               fill="none"
               stroke={stroke}
-              strokeWidth={1.5}
+              strokeWidth={2}
               strokeLinecap="round"
               initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
               animate={{ pathLength: 1 }}
@@ -181,7 +205,7 @@ function PerformanceTile({
               const pad = 2;
               const lx = w - pad;
               const ly = pad + (1 - (last - min) / span) * (h - pad * 2);
-              return <circle cx={lx} cy={ly} r={3} fill={stroke} />;
+              return <circle cx={lx} cy={ly} r={2.5} fill={stroke} />;
             })()}
           </svg>
         </div>
@@ -191,7 +215,7 @@ function PerformanceTile({
         <div className="mt-4">
           <div className="flex items-center justify-between gap-2">
             <span className="font-mono-display text-[10px] font-bold uppercase tracking-wide text-white/35">
-              vs {tierLabel} avg
+              vs {vsLabel}
             </span>
             <span
               className={`font-mono-display text-[10px] font-bold tabular-nums ${
@@ -255,35 +279,64 @@ function PerformanceTile({
 
 export function PerformanceGrid({ stats, isProUser, tierLabel }: PerformanceGridProps) {
   const [range, setRange] = useState<(typeof TIME_RANGES)[number]>("Last 20");
+  const [peerMode, setPeerMode] = useState<PeerMode>("tierAvg");
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl px-4 pb-6 pt-5 sm:px-6 lg:px-8 xl:px-10">
-      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <span className="h-px w-6 shrink-0 bg-accent-red" aria-hidden />
           <h2 className="font-mono-display text-[11px] font-bold uppercase tracking-[0.3em] text-white/50">
             Performance // Overview
           </h2>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {TIME_RANGES.map((r) => (
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <div className="flex flex-wrap gap-2">
+            {TIME_RANGES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                className={`rounded-sm px-3 py-2 font-mono-display text-[10px] font-bold uppercase tracking-wide transition-colors ${
+                  range === r ? "bg-accent-red text-white" : "bg-white/[0.03] text-white/50 hover:text-white"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <div
+            className="inline-flex w-fit rounded-sm border border-white/[0.08] p-0.5 font-mono-display text-[10px] font-bold uppercase tracking-wide"
+            role="group"
+            aria-label="Peer comparison"
+          >
             <button
-              key={r}
               type="button"
-              onClick={() => setRange(r)}
-              className={`rounded-sm px-3 py-2 font-mono-display text-[10px] font-bold uppercase tracking-wide transition-colors ${
-                range === r ? "bg-accent-red text-white" : "bg-white/[0.03] text-white/50 hover:text-white"
+              onClick={() => setPeerMode("tierAvg")}
+              className={`rounded-sm px-2.5 py-2 transition-colors ${
+                peerMode === "tierAvg" ? "bg-accent-red text-white" : "text-white/50 hover:text-white"
               }`}
             >
-              {r}
+              VS RADIANT AVG
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setPeerMode("top1")}
+              className={`rounded-sm px-2.5 py-2 transition-colors ${
+                peerMode === "top1" ? "bg-accent-red text-white" : "text-white/50 hover:text-white"
+              }`}
+            >
+              VS TOP 1%
+            </button>
+          </div>
         </div>
       </div>
 
+      <p className="sr-only">Tier context: {tierLabel}</p>
+
       <div className="grid grid-cols-1 gap-px bg-white/[0.04] md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <PerformanceTile key={stat.key} stat={stat} isProUser={isProUser} tierLabel={tierLabel} />
+          <PerformanceTile key={stat.key} stat={stat} isProUser={isProUser} peerMode={peerMode} />
         ))}
       </div>
     </div>

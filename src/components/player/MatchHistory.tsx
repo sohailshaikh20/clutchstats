@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { MatchCard } from "@/components/player/match/MatchCard";
+import { TiltMeter } from "@/components/player/match/TiltMeter";
 import type { Match } from "@/types/profile-match-card";
 
 export type { GameMode, Match, MatchResult } from "@/types/profile-match-card";
@@ -75,34 +76,35 @@ export function MatchHistory({ matches }: { matches: Match[] }) {
   return (
     <div className="border-t border-white/5 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-screen-2xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="h-px w-6 shrink-0 bg-accent-red" aria-hidden />
-            <h2 className="font-mono-display text-[11px] font-bold uppercase tracking-[0.3em] text-white/50">
-              MATCH HISTORY
-            </h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {CHIPS.map((c) => {
-              const active = filter === c.key;
-              return (
-                <motion.button
-                  key={c.key}
-                  type="button"
-                  onClick={() => setChip(c.key)}
-                  whileTap={reduced ? undefined : { scale: 0.96 }}
-                  transition={{ type: "spring", stiffness: 520, damping: 18 }}
-                  className={`rounded-none border px-3 py-1 font-mono-display text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${
-                    active
-                      ? "border-[#FF4655] bg-[#FF4655] text-white"
-                      : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06]"
-                  }`}
-                >
-                  {c.label}
-                </motion.button>
-              );
-            })}
-          </div>
+        <div className="flex items-center gap-3">
+          <span className="h-px w-6 shrink-0 bg-accent-red" aria-hidden />
+          <h2 className="font-mono-display text-[11px] font-bold uppercase tracking-[0.3em] text-white/50">
+            MATCH HISTORY
+          </h2>
+        </div>
+
+        <TiltMeter matches={matches.slice(0, 20).map((m) => ({ result: m.result }))} />
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {CHIPS.map((c) => {
+            const active = filter === c.key;
+            return (
+              <motion.button
+                key={c.key}
+                type="button"
+                onClick={() => setChip(c.key)}
+                whileTap={reduced ? undefined : { scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 520, damping: 18 }}
+                className={`rounded-none border px-3 py-1 font-mono-display text-[10px] font-bold uppercase tracking-[0.2em] transition-colors ${
+                  active
+                    ? "border-[#FF4655] bg-[#FF4655] text-white"
+                    : "border-white/[0.08] bg-white/[0.03] text-white/60 hover:bg-white/[0.06]"
+                }`}
+              >
+                {c.label}
+              </motion.button>
+            );
+          })}
         </div>
 
         {filtered.length === 0 ? (

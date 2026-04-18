@@ -1,16 +1,16 @@
 import type { ProfileHeaderData } from "@/components/player/ProfileHeader";
 import type { HeadlineStat } from "@/components/player/profile/StatPill";
 import type { MatchRow, PlayerProfilePayload } from "@/lib/player/build-profile-payload";
+import { inferDirection } from "@/lib/trend";
 import type { PlayerStats } from "@/lib/stats/calculator";
 import type { HenrikMMRResponse } from "@/types/valorant";
 
-function trendDirection(trend: number[]): "up" | "down" | "flat" {
-  if (trend.length < 2) return "flat";
-  const a = trend[0];
-  const b = trend[trend.length - 1];
-  if (b > a * 1.02) return "up";
-  if (b < a * 0.98) return "down";
-  return "flat";
+function resolvePlayerCardSmallUrl(payload: PlayerProfilePayload): string | undefined {
+  const s = payload.cardSmall?.trim();
+  if (s) return s;
+  const w = payload.cardWide?.trim();
+  if (w && /wideart\.png/i.test(w)) return w.replace(/wideart\.png/gi, "smallart.png");
+  return undefined;
 }
 
 function chronoLast(matches: MatchRow[], n: number): MatchRow[] {
@@ -82,7 +82,7 @@ export function buildProfileHeaderData(
       percentile: perf?.kd.percentile ?? 75,
       delta: 0,
       trend: kdTrend.length >= 2 ? kdTrend : [stats.kd * 0.9, stats.kd],
-      trendDirection: trendDirection(kdTrend.length >= 2 ? kdTrend : [stats.kd * 0.9, stats.kd]),
+      trendDirection: inferDirection(kdTrend.length >= 2 ? kdTrend : [stats.kd * 0.9, stats.kd]),
     },
     {
       key: "adr",
@@ -91,7 +91,7 @@ export function buildProfileHeaderData(
       percentile: perf?.adr.percentile ?? 70,
       delta: 0,
       trend: adrTrend.length >= 2 ? adrTrend : [stats.adr * 0.95, stats.adr],
-      trendDirection: trendDirection(adrTrend.length >= 2 ? adrTrend : [stats.adr * 0.95, stats.adr]),
+      trendDirection: inferDirection(adrTrend.length >= 2 ? adrTrend : [stats.adr * 0.95, stats.adr]),
     },
     {
       key: "hs",
@@ -100,7 +100,7 @@ export function buildProfileHeaderData(
       percentile: perf?.headshotPct.percentile ?? 55,
       delta: 0,
       trend: hsTrend.length >= 2 ? hsTrend : [stats.hsPct * 0.9, stats.hsPct],
-      trendDirection: trendDirection(hsTrend.length >= 2 ? hsTrend : [stats.hsPct * 0.9, stats.hsPct]),
+      trendDirection: inferDirection(hsTrend.length >= 2 ? hsTrend : [stats.hsPct * 0.9, stats.hsPct]),
     },
     {
       key: "winrate",
@@ -109,7 +109,7 @@ export function buildProfileHeaderData(
       percentile: perf?.winRate.percentile ?? 65,
       delta: 0,
       trend: wrTrend.length >= 2 ? wrTrend : [stats.winRate * 0.95, stats.winRate],
-      trendDirection: trendDirection(wrTrend.length >= 2 ? wrTrend : [stats.winRate * 0.95, stats.winRate]),
+      trendDirection: inferDirection(wrTrend.length >= 2 ? wrTrend : [stats.winRate * 0.95, stats.winRate]),
     },
   ];
 
@@ -133,6 +133,7 @@ export function buildProfileHeaderData(
     region: payload.region,
     countryCode: undefined,
     playerCardWideUrl: payload.cardWide,
+    playerCardSmallUrl: resolvePlayerCardSmallUrl(payload),
     level: payload.accountLevel,
     currentTier: mmr.current_data.currenttierpatched || payload.currentRank.name,
     currentRR: payload.currentRank.rr,

@@ -25,6 +25,8 @@ export interface Match {
     acs: number;
     hsPct: number;
     damagePerRound: number;
+    /** Damage dealt minus absorbed, per round (Henrik). */
+    ddaPerRound?: number;
     firstBloods?: number;
     multiKills?: number;
   };

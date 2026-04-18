@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { formatDelta } from "@/lib/format";
 
 export const TIER_COLORS: Record<string, { primary: string; glow: string }> = {
   Iron: { primary: "#4A4A52", glow: "rgba(74,74,82,0.3)" },
@@ -37,42 +38,58 @@ type RankBoxProps = {
   showRr?: boolean;
   patched: string;
   size?: "current" | "peak";
+  rrDelta?: number | null;
 };
 
-function RankBox({ label, tierName, rr, showRr, patched, size = "current" }: RankBoxProps) {
+function RankBox({ label, tierName, rr, showRr, patched, size = "current", rrDelta }: RankBoxProps) {
   const reduced = Boolean(useReducedMotion());
   const { primary, glow } = lookupTierColors(patched);
-  const titleSize = size === "current" ? "text-lg" : "text-sm";
+  const titleSize = size === "current" ? "text-base" : "text-sm";
+  const minW = size === "current" ? "min-w-[110px]" : "min-w-[110px]";
+
+  const hasDelta = typeof rrDelta === "number";
+  const deltaLine =
+    size === "current" && showRr && rr != null && hasDelta
+      ? `${formatDelta(rrDelta, { suffix: " RR" })} · 24h`
+      : null;
+  const deltaTone = !hasDelta
+    ? "text-white/40"
+    : rrDelta > 0
+      ? "text-[#00E5D1]"
+      : rrDelta < 0
+        ? "text-accent-red"
+        : "text-white/40";
 
   return (
     <motion.div
       initial={reduced ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="relative min-w-[140px] flex-1 px-4 py-3 sm:min-w-[160px]"
+      className={`relative ${minW} flex-1 px-3 py-2 sm:px-3.5`}
       style={{
         clipPath: clip,
         background: "rgba(19,19,26,0.72)",
-        boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 24px ${glow}`,
+        boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 20px ${glow}`,
         backdropFilter: "blur(10px)",
       }}
     >
-      <p className="font-mono-display text-[9px] font-bold uppercase tracking-[0.3em] text-white/40">
-        {label}
-      </p>
+      <p className="font-mono-display text-[8px] font-bold uppercase tracking-[0.25em] text-white/40">{label}</p>
       <p
         className={`font-display ${titleSize} font-black uppercase leading-tight text-white`}
-        style={{ textShadow: `0 0 18px ${glow}, 0 0 2px ${primary}` }}
+        style={{ textShadow: `0 0 14px ${glow}, 0 0 2px ${primary}` }}
       >
         {tierName}
       </p>
       {showRr && rr != null ? (
-        <p className="mt-1 flex items-baseline gap-1">
-          <span className="font-mono-display text-2xl font-bold tabular-nums text-white">{rr}</span>
-          <span className="font-mono-display text-[10px] font-bold uppercase tracking-widest text-white/50">
-            RR
-          </span>
-        </p>
+        <div className="mt-0.5">
+          <p className="flex items-baseline gap-1">
+            <span className="font-mono-display text-xl font-bold tabular-nums text-white sm:text-2xl">{rr}</span>
+            <span className="font-mono-display text-[9px] font-bold uppercase tracking-widest text-white/50">RR</span>
+          </p>
+          {deltaLine ? (
+            <p className={`mt-0.5 font-mono-display text-[10px] font-bold tabular-nums ${deltaTone}`}>{deltaLine}</p>
+          ) : null}
+        </div>
       ) : null}
     </motion.div>
   );
@@ -100,7 +117,7 @@ export function RankBadge({
 
   return (
     <div className="flex shrink-0 flex-col gap-2">
-      <div className="flex gap-2 sm:gap-3">
+      <div className="flex gap-2 sm:gap-2.5">
         <RankBox
           label="Current"
           tierName={currentWord.toUpperCase()}
@@ -108,6 +125,7 @@ export function RankBadge({
           showRr
           patched={currentTierPatched}
           size="current"
+          rrDelta={currentRRDelta}
         />
         <RankBox
           label="Peak"
@@ -118,16 +136,6 @@ export function RankBadge({
           size="peak"
         />
       </div>
-      {currentRRDelta != null && currentRRDelta !== 0 ? (
-        <p
-          className={`text-center font-mono-display text-xs font-bold tabular-nums ${
-            currentRRDelta > 0 ? "text-[#00E5D1]" : "text-accent-red"
-          }`}
-        >
-          {currentRRDelta > 0 ? "+" : ""}
-          {currentRRDelta} last game
-        </p>
-      ) : null}
       {leaderboardRank != null ? (
         <p className="text-center font-mono-display text-[10px] uppercase tracking-widest text-white/50">
           <span className="text-accent-red">#</span>
