@@ -2,7 +2,16 @@
 
 import { animate, motion } from "framer-motion";
 import { Crosshair } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 function useCountUp(target: number, formatter: (n: number) => string) {
   const [v, setV] = useState(0);
@@ -56,7 +65,7 @@ function WinRateRing({ pct }: { pct: number }) {
           r={r}
           fill="none"
           stroke="currentColor"
-          strokeWidth="8"
+          strokeWidth="4"
           className="text-surface-light"
         />
         <circle
@@ -65,7 +74,7 @@ function WinRateRing({ pct }: { pct: number }) {
           r={r}
           fill="none"
           stroke="currentColor"
-          strokeWidth="8"
+          strokeWidth="4"
           strokeDasharray={c}
           strokeDashoffset={dash}
           strokeLinecap="round"
@@ -93,11 +102,14 @@ export function StatsOverview({
   winRate,
   headshotPct,
   avgCombatScore,
+  kdHistory,
 }: {
   kdRatio: number;
   winRate: number;
   headshotPct: number;
   avgCombatScore: number;
+  /** Oldest → newest KD per match (last ~15) for sparkline */
+  kdHistory?: number[];
 }) {
   const kdSafe = Number.isFinite(kdRatio) ? kdRatio : 0;
   const wrSafe = Number.isFinite(winRate) ? winRate : 0;
@@ -111,14 +123,48 @@ export function StatsOverview({
   const kdColor =
     kdSafe > 1 ? "text-win" : kdSafe < 1 ? "text-loss" : "text-text-secondary";
 
+  const kdChartData = useMemo(
+    () => (kdHistory ?? []).map((kd, i) => ({ i: i + 1, kd })),
+    [kdHistory]
+  );
+
   const cards = [
     {
       key: "kd",
       label: "KD ratio",
       node: (
-        <span className={`font-heading text-4xl font-bold tabular-nums ${kdColor}`}>
-          {kdDisplay}
-        </span>
+        <div className="flex w-full flex-col items-center gap-2">
+          {kdChartData.length > 1 ? (
+            <div className="h-16 w-full max-w-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={kdChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="i" hide />
+                  <YAxis domain={["auto", "auto"]} hide />
+                  <Tooltip
+                    contentStyle={{ background: "#1A2634", border: "1px solid #243447", borderRadius: 8 }}
+                    formatter={(v) => [`${Number(v).toFixed(2)}`, "KD"]}
+                    labelFormatter={(l) => `Match ${l}`}
+                  />
+                  <ReferenceLine
+                    y={1}
+                    stroke="#768691"
+                    strokeDasharray="4 4"
+                    label={{ value: "Avg", fill: "#768691", fontSize: 10 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="kd"
+                    stroke="#4AE3A7"
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={kdChartData.length < 40}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : null}
+          <span className={`font-heading text-4xl font-bold tabular-nums ${kdColor}`}>{kdDisplay}</span>
+        </div>
       ),
     },
     {
@@ -168,7 +214,7 @@ export function StatsOverview({
           className="rounded-xl bg-gradient-to-br from-surface-light/70 via-surface-light/20 to-transparent p-px transition-shadow hover:shadow-lg hover:shadow-black/20"
         >
           <div className="flex h-full flex-col rounded-[11px] bg-surface px-4 py-5 text-center transition-[border-color] hover:border-white/10">
-            <div className="flex min-h-[4.5rem] items-center justify-center">{c.node}</div>
+            <div className="flex min-h-[4.5rem] flex-col items-center justify-center">{c.node}</div>
             <p className="mt-3 font-body text-xs font-medium uppercase tracking-wider text-text-secondary">
               {c.label}
             </p>

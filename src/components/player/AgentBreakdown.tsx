@@ -8,8 +8,8 @@ export function AgentBreakdown({ agents }: { agents: AgentStatRow[] }) {
   return (
     <section className="border-t border-white/5 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-screen-2xl">
-        <h2 className="font-body text-xs font-semibold uppercase tracking-widest text-text-secondary">
-          Agent breakdown
+        <h2 className="font-heading text-xs font-semibold uppercase tracking-widest text-text-secondary">
+          Agent performance
         </h2>
         <motion.div
           initial="hidden"
@@ -29,7 +29,7 @@ export function AgentBreakdown({ agents }: { agents: AgentStatRow[] }) {
                 show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
               }}
               whileHover={{ y: -3, transition: { duration: 0.2 } }}
-              className="group relative aspect-[4/5] min-h-[260px] overflow-hidden rounded-xl border border-white/10 bg-surface shadow-lg transition-[border-color,box-shadow] hover:border-accent-red/35 hover:shadow-[0_0_28px_rgba(255,70,85,0.2)]"
+              className="group relative h-[200px] overflow-hidden rounded-xl border border-surface-light bg-surface shadow-lg transition-[transform,border-color,box-shadow] hover:scale-[1.03] hover:border-accent-red hover:shadow-lg"
             >
               {a.fullPortraitV2 ? (
                 <Image

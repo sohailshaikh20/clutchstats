@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Crown, ExternalLink, Flame, MapPin, Star, Trophy, Users } from "lucide-react";
+import { Crown, Flame, MapPin, Star, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { VctTournamentPath } from "@/components/esports/career-roadmap/VctTournamentPath";
 
 // ─── VCT Historical Data ──────────────────────────────────────────────────────
 
@@ -263,30 +264,25 @@ export function RoadmapPanel() {
         </div>
       </AnimatePresence>
 
-      {/* Career roadmap CTA */}
+      <div className="mt-10">
+        <h3 className="mb-3 font-heading text-xs font-semibold uppercase tracking-widest text-text-secondary">
+          VCT tournament path
+        </h3>
+        <VctTournamentPath />
+      </div>
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="rounded-xl border border-accent-red/20 bg-gradient-to-r from-surface to-transparent p-5"
+        className="mt-8 rounded-xl border border-white/10 bg-surface/80 p-4"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-heading text-xs font-semibold uppercase tracking-wider text-accent-gold">
-              Want to go pro?
-            </p>
-            <p className="mt-1 text-sm text-text-secondary">
-              Explore the full VCT tournament path from Challengers to Champions — with the rank-up guide.
-            </p>
-          </div>
-          <Link
-            href="/esports/roadmap"
-            className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-accent-red px-4 py-2 font-heading text-xs font-bold uppercase tracking-wide text-white transition hover:brightness-110"
-          >
+        <p className="font-body text-sm text-text-secondary">
+          Need the full rank-up playbook?{" "}
+          <Link href="/esports/roadmap" className="font-semibold text-accent-blue underline-offset-4 hover:underline">
             Open career roadmap
-            <ExternalLink className="size-3.5" />
           </Link>
-        </div>
+        </p>
       </motion.div>
     </div>
   );

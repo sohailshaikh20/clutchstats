@@ -6,7 +6,7 @@
  * To add a new team: find the CDN URL from vlr.gg team page → right-click logo → copy image address.
  */
 export const TEAM_LOGOS: Record<string, string> = {
-  // ── VCT Americas ─────────────────────────────────────────────────────────
+  // ── VCT Americas / NA ─────────────────────────────────────────────────────
   Sentinels: "https://owcdn.net/img/6229a64f47b11.png",
   "Cloud9": "https://owcdn.net/img/5f5bd7e9e12a8.png",
   "100 Thieves": "https://owcdn.net/img/5f5bb9a46f3d9.png",
@@ -19,6 +19,9 @@ export const TEAM_LOGOS: Record<string, string> = {
   "2GAME Esports": "https://owcdn.net/img/64ab19e0b5cfd.png",
   "MIBR": "https://owcdn.net/img/634e74d3a91e8.png",
   "ENVY": "https://owcdn.net/img/63e44d87e4b82.png",
+  "Ghost Gaming": "https://owcdn.net/img/5f5bd86cef949.png",
+  "OpTic Gaming": "https://owcdn.net/img/5f5bd8d668b91.png",
+  "TSM": "https://owcdn.net/img/5f5bd9b5d1f4f.png",
 
   // ── VCT EMEA ─────────────────────────────────────────────────────────────
   Fnatic: "https://owcdn.net/img/5f5bd8ef0d1d1.png",
@@ -33,6 +36,13 @@ export const TEAM_LOGOS: Record<string, string> = {
   "Giants Gaming": "https://owcdn.net/img/5f5bd86acfc59.png",
   "Apeks": "https://owcdn.net/img/628be5e0c2fe9.png",
   "M8": "https://owcdn.net/img/651e8e12c4e27.png",
+  "G2 Esports": "https://owcdn.net/img/5f5bd866b5e97.png",
+  "Astralis": "https://owcdn.net/img/5f5bd7d74e37a.png",
+  "Alliance": "https://owcdn.net/img/5f5bd7a84fc95.png",
+  "BIG": "https://owcdn.net/img/5f5bd7d4c24f5.png",
+  "Liquid": "https://owcdn.net/img/5f5bd8bb697b5.png",
+  "Team Liquid": "https://owcdn.net/img/5f5bd8bb697b5.png",
+  "TENSTAR": "https://owcdn.net/img/6317d7e3c2abb.png",
 
   // ── VCT Pacific ───────────────────────────────────────────────────────────
   "Paper Rex": "https://owcdn.net/img/6229a59e57dc5.png",
@@ -48,6 +58,9 @@ export const TEAM_LOGOS: Record<string, string> = {
   "Bleed Esports": "https://owcdn.net/img/6229a54cda299.png",
   "Kiwoom DRX": "https://owcdn.net/img/64e9f74d6f2f1.png",
   "DRX": "https://owcdn.net/img/64e9f74d6f2f1.png",
+  "XERXIA Esports": "https://owcdn.net/img/6229a5ce94c09.png",
+  "Boom Esports": "https://owcdn.net/img/60d8b42469e5e.png",
+  "Fancy United": "https://owcdn.net/img/637a1dae14f1b.png",
 
   // ── VCT China ─────────────────────────────────────────────────────────────
   "EDward Gaming": "https://owcdn.net/img/5f5bd8279c74c.png",
@@ -61,4 +74,20 @@ export const TEAM_LOGOS: Record<string, string> = {
   "Dragon Ranger Gaming": "https://owcdn.net/img/64ab22f3f41dc.png",
   "FunPlus Phoenix": "https://owcdn.net/img/60a30f5d8dc46.png",
   "FPX": "https://owcdn.net/img/60a30f5d8dc46.png",
+  "TYLOO": "https://owcdn.net/img/5f5bd9c0f39e3.png",
+  "ThunderTalk Gaming": "https://owcdn.net/img/64ab2e6d5a8f1.png",
+  "All Gamers": "https://owcdn.net/img/64ad1c2d9e4b3.png",
+
+  // ── Notable Challengers / Other ──────────────────────────────────────────
+  "Team Falcon": "https://owcdn.net/img/6229a6291fab8.png",
+  "XSET": "https://owcdn.net/img/6229a86e9b5f9.png",
+  "Version1": "https://owcdn.net/img/6229a84b4adc9.png",
+  "V1": "https://owcdn.net/img/6229a84b4adc9.png",
+  "Oxygen Esports": "https://owcdn.net/img/6229a7e82f959.png",
+  "eUnited": "https://owcdn.net/img/5f5bd8536f2e5.png",
+  "FaZe Clan": "https://owcdn.net/img/5f5bd85c2be48.png",
+  "FaZe": "https://owcdn.net/img/5f5bd85c2be48.png",
+  "Nerd Street": "https://owcdn.net/img/6229a8a69b819.png",
+  "Disguised": "https://owcdn.net/img/645f2aaeb19e1.png",
+  "DSG": "https://owcdn.net/img/645f2aaeb19e1.png",
 };

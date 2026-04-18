@@ -3,8 +3,8 @@
 import { motion, useReducedMotion } from "framer-motion";
 import {
   BarChart3,
-  Brain,
   ChevronDown,
+  LineChart,
   Search,
   Trophy,
   Users,
@@ -74,10 +74,10 @@ const featureCards = [
     accent: "text-accent-gold",
   },
   {
-    title: "AI Coach",
-    body: "Personalised improvement plans powered by AI. Know exactly what to fix.",
-    href: "/coach",
-    icon: Brain,
+    title: "Detailed Analytics",
+    body: "HS%, damage delta, ability casts, consistency ratings, and 40+ metrics per match.",
+    href: "/player/CB10/Aegon",
+    icon: LineChart,
     accent: "text-accent-red",
   },
 ] as const;
@@ -258,7 +258,7 @@ export default function HomeLanding() {
               }
               className="mt-5 text-balance font-body text-base text-text-secondary sm:text-lg"
             >
-              Stats. Esports. Squad Finder. AI Coach.
+              Stats. Esports. Squad Finder. Deep Analytics.
             </motion.p>
 
             <motion.form
@@ -405,7 +405,7 @@ export default function HomeLanding() {
                       className="group relative block h-full overflow-hidden rounded-xl border border-surface-light bg-surface p-6 transition-[border-color,box-shadow] hover:border-accent-red hover:shadow-glow-red"
                     >
                       {agent ? (
-                        <div className="pointer-events-none absolute -right-4 -top-4 size-28 opacity-25 transition-opacity group-hover:opacity-40">
+                        <div className="pointer-events-none absolute -right-4 -top-4 size-28 opacity-[0.06] transition-opacity group-hover:opacity-[0.12]">
                           <Image
                             src={agent.displayIcon}
                             alt=""
@@ -597,7 +597,7 @@ export default function HomeLanding() {
             </motion.h2>
             {leaderboardSource === "fallback" && (
               <span className="rounded border border-white/10 bg-surface px-1.5 py-0.5 font-heading text-[10px] font-semibold uppercase tracking-wide text-text-secondary/60">
-                Sample data
+                (Sample)
               </span>
             )}
           </div>
@@ -709,7 +709,7 @@ export default function HomeLanding() {
             Ready to rank up?
           </h2>
           <p className="mt-4 font-body text-text-secondary">
-            Get personalised AI coaching insights for every match
+            Track every stat, find your squad, and follow the VCT — all in one place.
           </p>
           <motion.div
             className="mt-10 inline-block"

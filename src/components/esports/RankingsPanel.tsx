@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowDown, ArrowUp, ListOrdered, Minus } from "lucide-react";
+import { ListOrdered } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { FetchErrorPanel } from "@/components/ui/FetchErrorPanel";
 import type { VLRRanking, VLRRegion } from "@/types/esports";
@@ -15,17 +16,14 @@ const SUB: { id: string; label: string; region: VLRRegion }[] = [
   { id: "china", label: "China", region: "cn" },
 ];
 
-type RankingExt = VLRRanking & {
-  rank_change?: number;
-  change?: number;
-  movement?: number;
-};
-
-function changeFor(row: RankingExt): number | null {
-  if (typeof row.rank_change === "number") return row.rank_change;
-  if (typeof row.change === "number") return row.change;
-  if (typeof row.movement === "number") return row.movement;
-  return null;
+function winStreakFromEnd(form: Array<"W" | "L"> | undefined): number {
+  if (!form?.length) return 0;
+  let c = 0;
+  for (let i = form.length - 1; i >= 0; i--) {
+    if (form[i] === "W") c++;
+    else break;
+  }
+  return c;
 }
 
 function borderForRank(rank: number): string {
@@ -119,30 +117,38 @@ export function RankingsPanel() {
       ) : (
         <div>
         <div className="mt-4 overflow-x-auto rounded-xl border border-surface-light bg-surface">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-[10px] font-heading uppercase tracking-wider text-text-secondary">
-                <th className="px-3 py-3">#</th>
+                <th className="px-3 py-3">Pos</th>
                 <th className="px-3 py-3">Team</th>
                 <th className="px-3 py-3 text-right">Rating</th>
+                <th className="px-3 py-3 text-right">Record</th>
+                <th className="px-3 py-3 text-right">Streak</th>
                 <th className="px-3 py-3 text-center">Form</th>
-                <th className="px-3 py-3 text-right">Δ</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
-                const ext = row as RankingExt;
-                const ch = changeFor(ext);
+                const streak = winStreakFromEnd(row.last_results);
+                const rec = row.record;
+                const recStr =
+                  rec && typeof rec.wins === "number"
+                    ? `${rec.wins}-${rec.losses ?? 0}`
+                    : "—";
                 return (
                   <tr
                     key={row.team.id}
-                    className={`border-b border-white/5 border-l-4 ${borderForRank(row.rank)}`}
+                    className={`border-b border-white/5 border-l-4 transition-colors hover:bg-surface-light/60 ${borderForRank(row.rank)}`}
                   >
-                    <td className="px-3 py-3 font-heading font-bold tabular-nums text-text-secondary">
+                    <td className="px-3 py-3 font-heading text-xl font-bold tabular-nums text-text-secondary">
                       {row.rank}
                     </td>
                     <td className="px-3 py-3">
-                      <div className="flex min-w-0 items-center gap-2">
+                      <Link
+                        href={`/esports/team/${row.team.id}`}
+                        className="flex min-w-0 items-center gap-2 transition hover:opacity-90"
+                      >
                         <TeamLogo
                           name={row.team.name}
                           logoUrl={TEAM_LOGOS[row.team.name] ?? row.team.logo}
@@ -151,10 +157,16 @@ export function RankingsPanel() {
                         <span className="min-w-0 font-heading font-semibold text-text-primary">
                           {row.team.name}
                         </span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-3 py-3 text-right font-heading text-base font-bold tabular-nums text-text-primary">
                       {row.points}
+                    </td>
+                    <td className="px-3 py-3 text-right font-heading text-sm font-semibold tabular-nums text-text-primary">
+                      {recStr}
+                    </td>
+                    <td className="px-3 py-3 text-right font-heading text-sm font-bold tabular-nums text-win">
+                      {streak > 0 ? `W${streak}` : "—"}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex justify-center gap-1">
@@ -168,25 +180,6 @@ export function RankingsPanel() {
                           />
                         ))}
                       </div>
-                    </td>
-                    <td className="px-3 py-3 text-right font-heading text-xs font-semibold">
-                      {ch == null ? (
-                        <span className="inline-flex items-center justify-end gap-0.5 text-text-secondary">
-                          <Minus className="size-3" aria-hidden />—
-                        </span>
-                      ) : ch > 0 ? (
-                        <span className="inline-flex items-center justify-end gap-0.5 text-win">
-                          <ArrowUp className="size-3.5" aria-hidden />
-                          {ch}
-                        </span>
-                      ) : ch < 0 ? (
-                        <span className="inline-flex items-center justify-end gap-0.5 text-loss">
-                          <ArrowDown className="size-3.5" aria-hidden />
-                          {Math.abs(ch)}
-                        </span>
-                      ) : (
-                        <span className="text-text-secondary">0</span>
-                      )}
                     </td>
                   </tr>
                 );

@@ -120,7 +120,7 @@ const STAGE_DETAILS: Record<VctStageId, StageDetail> = {
 /** Swap to any `VctStageId` to show the live “pulse” ring (wire to calendar later). */
 const ACTIVE_STAGE: VctStageId = "masters";
 
-const NODE = { r: 34 };
+const NODE = { r: 40 };
 
 const REGION_LINE: Record<string, string> = {
   emea: "#818cf8",
@@ -147,7 +147,7 @@ function MetroNode({
   cy,
   onSelect,
   active,
-  labelFontSize = 10,
+  labelFontSize = 12,
 }: {
   id: VctStageId;
   label: string;
@@ -388,7 +388,7 @@ export function VctTournamentPath() {
             id="game-changers"
             label="Game Changers"
             fill="#a855f7"
-            labelFontSize={9}
+            labelFontSize={12}
             cx={90}
             cy={220}
             onSelect={setSelected}

@@ -6,7 +6,6 @@ import {
   Map,
   Menu,
   Search,
-  Sparkles,
   Trophy,
   UsersRound,
   X,
@@ -21,7 +20,6 @@ const navItems = [
   { href: "/esports", label: "Esports" },
   { href: "/roadmaps", label: "Roadmaps" },
   { href: "/lfg", label: "Find Squad" },
-  { href: "/coach", label: "AI Coach" },
 ] as const;
 
 const tabItems = [
@@ -29,7 +27,6 @@ const tabItems = [
   { href: "/esports", label: "Esports", icon: Trophy },
   { href: "/roadmaps", label: "Roadmaps", icon: Map },
   { href: "/lfg", label: "Squad", icon: UsersRound },
-  { href: "/coach", label: "Coach", icon: Sparkles },
 ] as const;
 
 function isNavActive(pathname: string, href: string) {

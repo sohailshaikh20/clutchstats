@@ -85,14 +85,30 @@ export class HenrikClient {
     cacheOpts: NonNullable<RequestInit['next']> = {}
   ): Promise<HenrikApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8_000);
+    const t0 = Date.now();
 
-    const res = await fetch(url, {
-      headers: {
-        Authorization: this.apiKey,
-        'Content-Type': 'application/json',
-      },
-      next: cacheOpts,
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: {
+          Authorization: this.apiKey,
+          'Content-Type': 'application/json',
+        },
+        next: cacheOpts,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if ((err as { name?: string }).name === 'AbortError') {
+        throw new HenrikApiError({ status: 408, message: 'Henrik API request timed out (8s)' });
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    console.debug(`[HenrikClient] ${endpoint} → ${res.status} (${Date.now() - t0}ms)`);
 
     if (!res.ok) {
       const retryAfterHeader = res.headers.get('Retry-After');

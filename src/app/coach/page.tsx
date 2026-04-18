@@ -1,5 +1,5 @@
+import { CoachLandingDemo } from "@/components/coach/CoachLandingDemo";
 import { CoachPremiumExperience } from "@/components/coach/CoachPremiumExperience";
-import { CoachUpsell } from "@/components/coach/CoachUpsell";
 import { getAgents, getMaps } from "@/lib/api/assets";
 import { profileIsPremium } from "@/lib/coach/premium";
 import { createClient } from "@/lib/supabase/server";
@@ -20,7 +20,7 @@ export default async function CoachPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <CoachUpsell />;
+    return <CoachLandingDemo />;
   }
 
   const { data: profile } = await supabase
@@ -30,7 +30,7 @@ export default async function CoachPage() {
     .single();
 
   if (!profile || !profileIsPremium(profile)) {
-    return <CoachUpsell />;
+    return <CoachLandingDemo />;
   }
 
   let agents: Awaited<ReturnType<typeof getAgents>> = [];

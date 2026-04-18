@@ -131,7 +131,7 @@ export function MatchHistory({ matches }: { matches: MatchRow[] }) {
                           <p className="mt-0.5 font-heading text-sm font-semibold text-text-primary">
                             {m.mapName}
                           </p>
-                          <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
+                          <p className="mt-1 font-heading text-xl font-bold tabular-nums">
                             <span className={myScoreClass}>{m.teamRounds}</span>
                             <span className="text-text-secondary"> – </span>
                             <span className={oppScoreClass}>{m.oppRounds}</span>

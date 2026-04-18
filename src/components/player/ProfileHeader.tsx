@@ -47,8 +47,8 @@ export function ProfileHeader({
           alt=""
           className="h-full min-h-[220px] w-full object-cover object-[center_20%]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background from-35% via-background/55 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background from-[55%] via-background/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-transparent to-transparent" />
       </div>
 
       <div className="relative z-[1] mx-auto flex min-h-[220px] w-full max-w-screen-2xl flex-col justify-end px-4 pb-6 pt-10 sm:min-h-[240px] sm:px-6 sm:pb-7 lg:px-8 xl:px-10">

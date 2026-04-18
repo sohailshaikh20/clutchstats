@@ -121,7 +121,7 @@ export function LfgFilterBar({
           <button
             type="button"
             onClick={onCreateClick}
-            className="ml-auto rounded-full bg-accent-red px-5 py-2.5 font-heading text-sm font-bold uppercase tracking-wide text-white shadow-glow-red transition hover:bg-accent-red/90"
+            className="ml-auto hidden rounded-full bg-accent-red px-5 py-2.5 font-heading text-sm font-bold uppercase tracking-wide text-white shadow-glow-red transition hover:bg-accent-red/90 sm:inline-flex"
           >
             Create post
           </button>
@@ -139,11 +139,14 @@ export function LfgFilterBar({
                   type="button"
                   onClick={() => toggleAgent(a.displayName)}
                   title={a.displayName}
-                  className={`flex size-10 items-center justify-center rounded-lg border-2 transition ${
+                  className={`flex w-14 flex-col items-center gap-0.5 rounded-lg border-2 py-1 transition ${
                     on ? "border-accent-red bg-surface-light" : "border-transparent bg-surface hover:border-white/20"
                   }`}
                 >
-                  <Image src={a.displayIcon} alt="" width={32} height={32} className="size-8 object-contain" />
+                  <Image src={a.displayIcon} alt="" width={28} height={28} className="size-7 object-contain" />
+                  <span className="max-w-full truncate px-0.5 text-center font-body text-[9px] leading-none text-text-secondary">
+                    {a.displayName}
+                  </span>
                 </button>
               );
             })}

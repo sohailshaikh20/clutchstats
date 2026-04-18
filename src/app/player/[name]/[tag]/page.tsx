@@ -3,13 +3,13 @@ import { HenrikApiError, getHenrikClient } from "@/lib/api/henrik";
 import { pageMetadata } from "@/lib/page-metadata";
 import { AgentBreakdown } from "@/components/player/AgentBreakdown";
 import { CoachingCta } from "@/components/player/CoachingCta";
-import { KdTrendChart } from "@/components/player/KdTrendChart";
 import { MapPerformance } from "@/components/player/MapPerformance";
 import { MatchHistory } from "@/components/player/MatchHistory";
 import { PlayerNotFound } from "@/components/player/PlayerNotFound";
 import { PlayerPrivacy } from "@/components/player/PlayerPrivacy";
 import { ProfileErrorGeneric } from "@/components/player/ProfileErrorGeneric";
 import { ProfileHeader } from "@/components/player/ProfileHeader";
+import { PremiumLockedStats } from "@/components/player/PremiumLockedStats";
 import { StatsOverview } from "@/components/player/StatsOverview";
 import {
   buildPlayerProfilePayload,
@@ -106,6 +106,10 @@ export default async function PlayerProfilePage({
     const matches = Array.isArray(matchRes.data) ? matchRes.data : [];
 
     const payload = buildPlayerProfilePayload(account, mmr, matches, assets);
+    const kdHistory = [...payload.matches]
+      .sort((a, b) => a.gameStart - b.gameStart)
+      .slice(-18)
+      .map((m) => m.kd);
 
     return (
       <div className="min-h-screen bg-background pb-8">
@@ -125,16 +129,16 @@ export default async function PlayerProfilePage({
           peak={payload.peakRank}
         />
 
-        <div className="mx-auto w-full max-w-screen-2xl px-4 pb-8 pt-6 sm:px-6 lg:px-8 xl:px-10">
+        <div className="mx-auto w-full max-w-screen-2xl space-y-6 px-4 pb-8 pt-6 sm:px-6 lg:px-8 xl:px-10">
           <StatsOverview
             kdRatio={payload.stats.kdRatio}
             winRate={payload.stats.winRate}
             headshotPct={payload.stats.headshotPct}
             avgCombatScore={payload.stats.avgCombatScore}
+            kdHistory={kdHistory}
           />
+          <PremiumLockedStats />
         </div>
-
-        <KdTrendChart matches={payload.matches} />
         <MatchHistory matches={payload.matches} />
         <AgentBreakdown agents={payload.agents} />
         <MapPerformance maps={payload.maps} />

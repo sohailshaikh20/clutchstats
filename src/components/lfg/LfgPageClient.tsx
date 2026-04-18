@@ -2,10 +2,11 @@
 
 import { FetchErrorPanel } from "@/components/ui/FetchErrorPanel";
 import { createClient } from "@/lib/supabase/client";
+import { DEMO_LFG_POSTS } from "@/lib/lfg/demo-posts";
 import { rankInRange, rankKeyOrdinal } from "@/lib/lfg/ranks";
 import type { Agent } from "@/types/valorant";
 import type { User } from "@supabase/supabase-js";
-import { UsersRound } from "lucide-react";
+import { Plus, UsersRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LfgCreateModal } from "./LfgCreateModal";
 import type { AgentChip } from "./LfgFilterBar";
@@ -99,9 +100,11 @@ export function LfgPageClient({
     if (error) {
       console.error("[lfg] load", error);
       setLoadError(true);
-      setPosts([]);
+      setPosts(DEMO_LFG_POSTS);
     } else {
-      setPosts((data ?? []) as LfgPostWithProfile[]);
+      const real = (data ?? []) as LfgPostWithProfile[];
+      // Show demo posts when the board is empty so new visitors see example content
+      setPosts(real.length > 0 ? real : DEMO_LFG_POSTS);
     }
     setLoading(false);
   }, []);
@@ -194,7 +197,16 @@ export function LfgPageClient({
   }, [posts, region, rankMin, rankMax, playstyle, agentFilter]);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24 sm:pb-20">
+      <div className="mx-auto max-w-6xl px-4 pb-4 pt-8 sm:px-6 lg:px-8">
+        <header>
+          <h1 className="font-heading text-3xl font-bold text-text-primary md:text-4xl">Find squad</h1>
+          <p className="mt-2 max-w-2xl font-body text-sm text-text-secondary">
+            Match with players in your region and rank — posts refresh live when someone new goes LFG.
+          </p>
+        </header>
+      </div>
+
       <div className="sticky top-16 z-30">
         <LfgFilterBar
           region={region}
@@ -212,14 +224,7 @@ export function LfgPageClient({
         />
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="font-heading text-3xl font-bold text-text-primary md:text-4xl">Find squad</h1>
-          <p className="mt-2 text-sm text-text-secondary">
-            Match with players in your region and rank — posts refresh live when someone new goes
-            LFG.
-          </p>
-        </header>
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
 
         {loading ? (
           <div className="space-y-4">
@@ -308,6 +313,15 @@ export function LfgPageClient({
           void refreshViewer();
         }}
       />
+
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className="fixed bottom-6 right-5 z-50 flex size-14 items-center justify-center rounded-full bg-accent-red text-white shadow-lg transition hover:brightness-110 sm:hidden"
+        aria-label="Create LFG post"
+      >
+        <Plus className="size-7" />
+      </button>
     </div>
   );
 }

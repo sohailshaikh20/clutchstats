@@ -118,7 +118,7 @@ export function LiveUpcomingPanel() {
           initial={reduced ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={reduced ? { duration: 0 } : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-2xl border border-accent-red/30 bg-surface p-6 shadow-glow-red/20"
+          className="relative overflow-hidden rounded-2xl border border-accent-red/30 border-l-[3px] border-l-accent-red bg-surface p-6 shadow-glow-red/20"
         >
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-red/10 to-transparent" />
           <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -196,7 +196,7 @@ export function LiveUpcomingPanel() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={reduced ? { duration: 0 } : { delay: i * 0.04 }}
               >
-                <div className="flex rounded-xl border border-surface-light bg-surface p-4 transition-[border-color,transform] hover:border-white/15 hover:shadow-md">
+                <div className="flex rounded-xl border border-surface-light bg-surface p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-red/30 hover:shadow-lg">
                   <Link
                     href={internalMatchUrl(m)}
                     className="min-w-0 flex-1 space-y-3"

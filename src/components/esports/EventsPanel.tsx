@@ -4,20 +4,11 @@ import { motion, useReducedMotion } from "framer-motion";
 import { CalendarRange } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import {
-  fetchVlrProxy,
-  unwrapSegments,
-} from "@/lib/esports/vlr-client-fetch";
+import { fetchVlrProxy, unwrapSegments } from "@/lib/esports/vlr-client-fetch";
 import { FetchErrorPanel } from "@/components/ui/FetchErrorPanel";
 import type { VLREvent } from "@/types/esports";
 
 type EventExt = VLREvent & { teams?: number; team_count?: number };
-
-function eventUrl(e: VLREvent): string {
-  // Link to external VLR for events (no internal event detail page yet)
-  if (e.url?.startsWith("http")) return e.url;
-  return `https://www.vlr.gg${e.url ?? ""}`;
-}
 
 function teamCount(e: EventExt): string {
   const n = e.teams ?? e.team_count;
@@ -25,26 +16,41 @@ function teamCount(e: EventExt): string {
   return "—";
 }
 
+function hidePrize(p: string | null): boolean {
+  if (!p) return true;
+  const x = p.trim().toLowerCase();
+  return x === "" || x === "0" || x === "--" || x === "tbd" || x === "n/a";
+}
+
 function statusBadge(status: VLREvent["status"]) {
   if (status === "ongoing") {
     return (
-      <span className="rounded-full bg-win/15 px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-wide text-win">
+      <span className="rounded-full bg-win/20 px-2 py-0.5 font-heading text-[10px] font-bold uppercase tracking-wide text-win">
         Ongoing
       </span>
     );
   }
   if (status === "upcoming") {
     return (
-      <span className="rounded-full bg-accent-blue/15 px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-wide text-accent-blue">
+      <span className="rounded-full bg-accent-blue/20 px-2 py-0.5 font-heading text-[10px] font-bold uppercase tracking-wide text-accent-blue">
         Upcoming
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-wide text-text-secondary">
+    <span className="rounded-full bg-surface-light px-2 py-0.5 font-heading text-[10px] font-bold uppercase tracking-wide text-text-secondary">
       Completed
     </span>
   );
+}
+
+function regionPillClass(region: string): string {
+  const r = (region || "").toLowerCase();
+  if (r.includes("america") || r === "na") return "border-accent-blue/40 bg-accent-blue/10 text-accent-blue";
+  if (r.includes("emea") || r.includes("eu")) return "border-accent-red/40 bg-accent-red/10 text-accent-red";
+  if (r.includes("pacific") || r.includes("ap")) return "border-win/40 bg-win/10 text-win";
+  if (r.includes("china") || r.includes("cn")) return "border-accent-gold/50 bg-accent-gold/10 text-accent-gold";
+  return "border-white/10 bg-white/5 text-text-secondary";
 }
 
 export function EventsPanel() {
@@ -114,17 +120,8 @@ export function EventsPanel() {
           No events in the feed
         </p>
         <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
-          When organisers publish upcoming or ongoing tournaments, they’ll show up here. You can
-          always browse the full calendar on VLR.
+          When organisers publish upcoming or ongoing tournaments, they’ll show up here.
         </p>
-        <Link
-          href="https://www.vlr.gg/events"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 inline-flex font-semibold text-accent-blue underline-offset-4 hover:underline"
-        >
-          Open VLR events →
-        </Link>
       </div>
     );
   }
@@ -133,37 +130,45 @@ export function EventsPanel() {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {events.map((e, i) => {
         const ext = e as EventExt;
+        const pill = regionPillClass(e.region);
         return (
           <motion.div
             key={e.id}
             initial={reduced ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={reduced ? { duration: 0 } : { delay: i * 0.04 }}
+            whileHover={reduced ? undefined : { y: -3, transition: { duration: 0.2 } }}
           >
             <Link
-              href={eventUrl(e)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-full flex-col rounded-xl border border-surface-light bg-surface p-4 transition-[border-color,box-shadow] hover:border-accent-blue/30 hover:shadow-glow-blue/20"
+              href={`/esports/event/${e.id}`}
+              className="flex h-full flex-col rounded-xl border border-surface-light bg-surface p-5 transition-all duration-200 hover:border-accent-red/30 hover:shadow-lg"
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="min-w-0 flex-1 font-heading text-base font-bold leading-snug text-text-primary">
+                <h3 className="min-w-0 flex-1 font-heading text-lg font-bold leading-snug text-text-primary">
                   {e.title}
                 </h3>
                 {statusBadge(e.status)}
               </div>
-              <p className="mt-3 font-body text-xs text-text-secondary">{e.dates}</p>
-              {e.prizepool ? (
-                <p className="mt-1 font-heading text-xs font-semibold text-accent-gold">
-                  {e.prizepool}
-                </p>
-              ) : null}
-              <p className="mt-auto pt-4 font-heading text-[10px] uppercase tracking-wide text-text-secondary">
-                {teamCount(ext)} · {e.region}
-              </p>
-              <span className="mt-2 text-xs font-semibold text-accent-blue">
-                Brackets, teams & schedule on VLR →
+              <span className={`mt-3 inline-flex w-fit rounded-full border px-2 py-0.5 font-body text-[10px] font-semibold uppercase tracking-wide ${pill}`}>
+                {e.region || "International"}
               </span>
+              <p className="mt-3 font-body text-xs text-text-secondary">{e.dates}</p>
+              {!hidePrize(e.prizepool) ? (
+                <p className="mt-2 font-heading text-base font-bold text-accent-gold">{e.prizepool}</p>
+              ) : null}
+              {e.status === "ongoing" ? (
+                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-surface-light">
+                  <motion.div
+                    className="h-full rounded-full bg-win"
+                    initial={{ width: "32%" }}
+                    animate={{ width: ["32%", "55%", "40%", "32%"] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                </div>
+              ) : null}
+              <p className="mt-auto pt-4 font-body text-[10px] uppercase tracking-wide text-text-secondary">
+                {teamCount(ext)} · Tap for event hub
+              </p>
             </Link>
           </motion.div>
         );
