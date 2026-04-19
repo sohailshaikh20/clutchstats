@@ -4,73 +4,75 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useMemo, useState } from "react";
 import {
-  getTeamsByRegion,
-  PREMIER_REGIONS,
-  PREMIER_TEAMS,
-  searchTeams,
-  type PremierDivision,
-  type PremierRegion,
-  type PremierTeam,
-} from "@/lib/premier/mockData";
+  DIVISION_COLORS,
+  DIVISION_NAMES,
+  divisionColor,
+  divisionName,
+  type PremierConference,
+  type PremierLeaderboardEntry,
+  type PremierTeamSearchResult,
+} from "@/lib/henrikdev/premier";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface PremierLandingProps {
+  conferences: PremierConference[];
+  initialLeaderboard: PremierLeaderboardEntry[];
+  totalTeams?: number;
+  searchResults?: PremierTeamSearchResult[];
+  searchQuery?: string;
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DIVISION_ORDER: PremierDivision[] = [
-  "Open",
-  "Intermediate",
-  "Advanced",
-  "Elite",
-  "Contender",
-  "Invite",
-];
+// Division order: worst → best (for bar rendering left-to-right)
+const DIVISION_ORDER = [6, 5, 4, 3, 2, 1] as const;
 
-const DIVISION_COLORS: Record<PremierDivision, string> = {
-  Open: "#8A8A95",
-  Intermediate: "#3A9DB8",
-  Advanced: "#2FB57A",
-  Elite: "#FFB547",
-  Contender: "#FF4655",
-  Invite: "#FFF6A1",
-};
+const REGION_TABS = [
+  { region: "na", label: "NA" },
+  { region: "eu", label: "EU" },
+  { region: "ap", label: "APAC" },
+  { region: "kr", label: "KR" },
+  { region: "latam", label: "LATAM" },
+  { region: "br", label: "BR" },
+] as const;
 
-const REGION_TABS: Array<{ region: PremierRegion; label: string }> = [
-  { region: "NA", label: "NA" },
-  { region: "EU", label: "EU" },
-  { region: "APAC", label: "APAC" },
-  { region: "KR", label: "KR" },
-  { region: "LATAM", label: "LATAM" },
-  { region: "BR", label: "BR" },
-];
+type RegionKey = (typeof REGION_TABS)[number]["region"];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function RedBar() {
-  return <span className="inline-block w-4 h-px bg-[#FF4655] mr-2 align-middle shrink-0" aria-hidden />;
+  return (
+    <span className="inline-block w-4 h-px bg-[#FF4655] mr-2 align-middle shrink-0" aria-hidden />
+  );
 }
 
-function DivisionPill({ division }: { division: PremierDivision }) {
+function DivisionPill({ division }: { division: number }) {
+  const color = divisionColor(division);
+  const name = divisionName(division);
   return (
     <span
       className="font-mono-display text-[10px] font-bold uppercase tracking-[0.12em] px-2 py-0.5 leading-none"
       style={{
-        color: DIVISION_COLORS[division],
-        background: `${DIVISION_COLORS[division]}18`,
-        border: `1px solid ${DIVISION_COLORS[division]}40`,
+        color,
+        background: `${color}18`,
+        border: `1px solid ${color}40`,
       }}
     >
-      {division}
+      {name}
     </span>
   );
 }
 
-function DivisionBar({ teams }: { teams: PremierTeam[] }) {
-  if (!teams.length) return <div className="h-1 rounded-full bg-white/[0.06] w-full" />;
-  const total = teams.length;
+function DivisionBar({ entries }: { entries: PremierLeaderboardEntry[] }) {
+  if (!entries.length)
+    return <div className="h-1 rounded-full bg-white/[0.06] w-full" />;
+  const total = entries.length;
   const segments = DIVISION_ORDER.map((d) => ({
     d,
-    count: teams.filter((t) => t.division === d).length,
+    count: entries.filter((t) => t.division === d).length,
   })).filter((s) => s.count > 0);
 
   return (
@@ -83,7 +85,7 @@ function DivisionBar({ teams }: { teams: PremierTeam[] }) {
             backgroundColor: DIVISION_COLORS[d],
             width: `${(count / total) * 100}%`,
           }}
-          title={`${d}: ${count}`}
+          title={`${DIVISION_NAMES[d]}: ${count}`}
         />
       ))}
     </div>
@@ -103,17 +105,9 @@ function StatBlock({ label, value }: { label: string; value: string | number }) 
   );
 }
 
-function subregionToId(label: string) {
-  return label.toLowerCase().replace(/\s+/g, "-");
-}
+type LeaderboardRow = PremierLeaderboardEntry | PremierTeamSearchResult;
 
-function TeamsTable({
-  teams,
-  reduced,
-}: {
-  teams: PremierTeam[];
-  reduced: boolean;
-}) {
+function TeamsTable({ teams, reduced }: { teams: LeaderboardRow[]; reduced: boolean }) {
   const router = useRouter();
   return (
     <motion.div
@@ -126,16 +120,14 @@ function TeamsTable({
       <table className="w-full min-w-[560px]">
         <thead>
           <tr className="border-b border-white/[0.06]">
-            {["#", "TEAM", "DIVISION", "SCORE", "RECORD", "LAST MATCH"].map(
-              (col) => (
-                <th
-                  key={col}
-                  className="py-3 px-4 text-left font-mono-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40"
-                >
-                  {col}
-                </th>
-              )
-            )}
+            {["#", "TEAM", "DIVISION", "SCORE", "RECORD", ""].map((col, i) => (
+              <th
+                key={i}
+                className="py-3 px-4 text-left font-mono-display text-[10px] font-bold uppercase tracking-[0.2em] text-white/40"
+              >
+                {col}
+              </th>
+            ))}
           </tr>
         </thead>
         <motion.tbody
@@ -144,80 +136,70 @@ function TeamsTable({
           variants={
             reduced
               ? { hidden: {}, show: {} }
-              : {
-                  hidden: {},
-                  show: { transition: { staggerChildren: 0.03 } },
-                }
+              : { hidden: {}, show: { transition: { staggerChildren: 0.03 } } }
           }
         >
-          {teams.map((team, i) => (
-            <motion.tr
-              key={team.id}
-              variants={
-                reduced
-                  ? { hidden: { opacity: 1 }, show: { opacity: 1 } }
-                  : {
-                      hidden: { opacity: 0, x: -8 },
-                      show: { opacity: 1, x: 0, transition: { duration: 0.22 } },
-                    }
-              }
-              onClick={() => router.push(`/premier/${team.id}`)}
-              className="border-b border-white/[0.04] cursor-pointer transition-colors hover:bg-white/[0.03] group"
-            >
-              <td className="py-3 px-4 font-mono-display text-sm tabular-nums text-white/40">
-                {i + 1}
-              </td>
-              <td className="py-3 px-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="size-8 shrink-0 flex items-center justify-center bg-[#13131A] border border-white/[0.08]"
-                    style={{ clipPath: "polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)" }}
-                  >
-                    <span className="font-display text-[9px] font-black text-[#FF4655] leading-none">
-                      {team.tag}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-display font-bold text-sm text-white group-hover:text-[#FF4655] transition-colors truncate">
-                      {team.name}
-                    </p>
-                    <p className="font-mono-display text-[10px] text-white/40">#{team.tag}</p>
-                  </div>
-                </div>
-              </td>
-              <td className="py-3 px-4">
-                <DivisionPill division={team.division} />
-              </td>
-              <td className="py-3 px-4 font-mono-display text-sm tabular-nums text-white/80">
-                {team.divisionScore.toLocaleString()}
-              </td>
-              <td className="py-3 px-4 font-mono-display text-sm tabular-nums">
-                <span className="text-[#4AE3A7]">{team.record.w}W</span>
-                <span className="text-white/30 mx-1">-</span>
-                <span className="text-[#FF4655]">{team.record.l}L</span>
-              </td>
-              <td className="py-3 px-4 font-mono-display text-[11px]">
-                {team.lastMatch ? (
-                  <span>
-                    <span
-                      className={
-                        team.lastMatch.result === "W"
-                          ? "text-[#4AE3A7]"
-                          : "text-[#FF4655]"
+          {teams.map((team, i) => {
+            const div = (team as PremierLeaderboardEntry).division;
+            const score = (team as PremierLeaderboardEntry).score;
+            const wins = (team as PremierLeaderboardEntry).wins;
+            const losses = (team as PremierLeaderboardEntry).losses;
+            return (
+              <motion.tr
+                key={team.id}
+                variants={
+                  reduced
+                    ? { hidden: { opacity: 1 }, show: { opacity: 1 } }
+                    : {
+                        hidden: { opacity: 0, x: -8 },
+                        show: { opacity: 1, x: 0, transition: { duration: 0.22 } },
                       }
+                }
+                onClick={() => router.push(`/premier/${team.id}`)}
+                className="border-b border-white/[0.04] cursor-pointer transition-colors hover:bg-white/[0.03] group"
+              >
+                <td className="py-3 px-4 font-mono-display text-sm tabular-nums text-white/40">
+                  {i + 1}
+                </td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="size-8 shrink-0 flex items-center justify-center bg-[#13131A] border border-white/[0.08]"
+                      style={{ clipPath: "polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)" }}
                     >
-                      {team.lastMatch.result}
-                    </span>
-                    <span className="text-white/40 mx-1">·</span>
-                    <span className="text-white/60">{team.lastMatch.score}</span>
-                    <span className="text-white/30 ml-1">vs {team.lastMatch.opponent}</span>
-                  </span>
-                ) : (
-                  <span className="text-white/25">—</span>
-                )}
-              </td>
-            </motion.tr>
-          ))}
+                      <span className="font-display text-[9px] font-black text-[#FF4655] leading-none">
+                        {team.tag?.slice(0, 3) ?? "???"}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-display font-bold text-sm text-white group-hover:text-[#FF4655] transition-colors truncate">
+                        {team.name}
+                      </p>
+                      <p className="font-mono-display text-[10px] text-white/40">#{team.tag}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  {div != null ? <DivisionPill division={div} /> : <span className="text-white/25">—</span>}
+                </td>
+                <td className="py-3 px-4 font-mono-display text-sm tabular-nums text-white/80">
+                  {score != null ? score.toLocaleString() : <span className="text-white/25">—</span>}
+                </td>
+                <td className="py-3 px-4 font-mono-display text-sm tabular-nums">
+                  {wins != null && losses != null ? (
+                    <>
+                      <span className="text-[#4AE3A7]">{wins}W</span>
+                      <span className="text-white/30 mx-1">-</span>
+                      <span className="text-[#FF4655]">{losses}L</span>
+                    </>
+                  ) : (
+                    <span className="text-white/25">—</span>
+                  )}
+                </td>
+                <td className="py-3 px-4" />
+              </motion.tr>
+            );
+          })}
         </motion.tbody>
       </table>
     </motion.div>
@@ -226,50 +208,68 @@ function TeamsTable({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function PremierLanding() {
+export function PremierLanding({
+  conferences,
+  initialLeaderboard,
+  totalTeams,
+  searchResults,
+  searchQuery,
+}: PremierLandingProps) {
+  const router = useRouter();
   const reduced = Boolean(useReducedMotion());
 
-  const [activeRegion, setActiveRegion] = useState<PremierRegion>("NA");
-  const [expandedSubregion, setExpandedSubregion] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchActive, setSearchActive] = useState(false);
+  const [activeRegion, setActiveRegion] = useState<RegionKey>("na");
+  const [leaderboard, setLeaderboard] = useState<PremierLeaderboardEntry[]>(initialLeaderboard);
+  const [loadingRegion, setLoadingRegion] = useState(false);
+  const [expandedConference, setExpandedConference] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState(searchQuery ?? "");
 
-  const regionData = PREMIER_REGIONS.find((r) => r.region === activeRegion)!;
-  const regionTeams = useMemo(() => getTeamsByRegion(activeRegion), [activeRegion]);
-
-  const searchResults = useMemo(
-    () => (searchActive && searchQuery.trim() ? searchTeams(searchQuery) : null),
-    [searchActive, searchQuery]
+  // Conferences for the active region
+  const activeConferences = useMemo(
+    () => conferences.filter((c) => c.affinity === activeRegion),
+    [conferences, activeRegion],
   );
 
-  function handleRegionChange(region: PremierRegion) {
-    setActiveRegion(region);
-    setExpandedSubregion(null);
-  }
+  // Teams in a given conference
+  const getConferenceTeams = useCallback(
+    (confId: string) =>
+      leaderboard
+        .filter((t) => t.conference === confId)
+        .sort((a, b) => b.score - a.score),
+    [leaderboard],
+  );
 
-  function handleSubregionClick(subregionId: string) {
-    setExpandedSubregion((prev) => (prev === subregionId ? null : subregionId));
+  async function handleRegionChange(region: RegionKey) {
+    setActiveRegion(region);
+    setExpandedConference(null);
+    setLoadingRegion(true);
+    try {
+      const res = await fetch(`/api/premier/leaderboard?region=${region}`);
+      if (res.ok) {
+        const json: { teams: PremierLeaderboardEntry[] } = await res.json();
+        setLeaderboard(json.teams ?? []);
+      }
+    } catch {
+      // keep previous leaderboard on error
+    } finally {
+      setLoadingRegion(false);
+    }
   }
 
   function handleSearch(e: FormEvent) {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      setSearchActive(true);
+    const q = searchInput.trim();
+    if (q) {
+      router.push(`/premier?q=${encodeURIComponent(q)}`);
     }
   }
 
   function clearSearch() {
-    setSearchQuery("");
-    setSearchActive(false);
+    setSearchInput("");
+    router.push("/premier");
   }
 
-  function getSubregionTeams(subregionLabel: string) {
-    return regionTeams
-      .filter((t) => subregionToId(t.subregion) === subregionToId(subregionLabel))
-      .sort((a, b) => b.divisionScore - a.divisionScore);
-  }
-
-  const totalTeams = PREMIER_TEAMS.length;
+  const displayTotal = totalTeams ?? (leaderboard.length || 0);
 
   return (
     <div className="min-h-screen bg-[#0A0A0C]">
@@ -298,11 +298,11 @@ export function PremierLanding() {
                 "radial-gradient(ellipse 80% 70% at 50% 50%,black 10%,transparent 75%)",
             }}
           />
-          {/* Scanlines */}
           <div
             className="absolute inset-0 opacity-[0.025]"
             style={{
-              backgroundImage: "repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 3px)",
+              backgroundImage:
+                "repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 3px)",
             }}
           />
         </div>
@@ -340,17 +340,17 @@ export function PremierLanding() {
                   aria-hidden
                 />
                 <input
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (!e.target.value.trim()) setSearchActive(false);
-                  }}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search team name or tag"
                   className="h-12 w-full bg-[#0D0D10] border border-white/[0.08] py-3 pl-11 pr-4 font-mono-display text-sm text-white outline-none placeholder:text-white/30 transition-[border-color] focus:border-[#FF4655]/50"
-                  style={{ clipPath: "polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)" }}
+                  style={{
+                    clipPath:
+                      "polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)",
+                  }}
                 />
               </label>
-              {searchActive && searchResults !== null && (
+              {searchResults !== undefined && (
                 <button
                   type="button"
                   onClick={clearSearch}
@@ -368,17 +368,23 @@ export function PremierLanding() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="bg-[#0D0D10] border border-white/[0.06] p-6"
-            style={{ clipPath: "polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)" }}
+            style={{
+              clipPath:
+                "polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)",
+            }}
           >
             <p className="flex items-center font-mono-display text-[10px] font-bold uppercase tracking-[0.3em] text-white/50 mb-6">
               <RedBar />
               Premier · This Act
             </p>
             <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-              <StatBlock label="Teams Tracked" value={totalTeams} />
+              <StatBlock
+                label="Teams Tracked"
+                value={displayTotal > 0 ? displayTotal : "—"}
+              />
               <StatBlock label="Active Divisions" value={6} />
               <StatBlock label="Top Division" value="INVITE" />
-              <StatBlock label="Act Ending" value="10d 9h" />
+              <StatBlock label="Act Ending" value="Soon" />
             </div>
           </motion.div>
         </div>
@@ -395,6 +401,7 @@ export function PremierLanding() {
                   key={region}
                   type="button"
                   onClick={() => handleRegionChange(region)}
+                  disabled={loadingRegion}
                   className={[
                     "relative h-12 px-5 flex items-center gap-2 font-mono-display text-xs font-bold uppercase tracking-[0.2em] transition-colors",
                     active
@@ -419,13 +426,13 @@ export function PremierLanding() {
 
       {/* ─── CONTENT ──────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-7xl px-6 py-12">
-        {/* Search results */}
-        {searchResults !== null ? (
+        {searchResults !== undefined ? (
+          /* Search results */
           <div>
             <p className="flex items-center font-mono-display text-[11px] font-bold uppercase tracking-[0.3em] text-white/50 mb-6">
               <RedBar />
-              Search results for &ldquo;{searchQuery}&rdquo; — {searchResults.length} team
-              {searchResults.length !== 1 ? "s" : ""}
+              Search results for &ldquo;{searchQuery}&rdquo; &mdash;{" "}
+              {searchResults.length} team{searchResults.length !== 1 ? "s" : ""}
             </p>
             {searchResults.length === 0 ? (
               <div className="py-16 text-center">
@@ -448,27 +455,35 @@ export function PremierLanding() {
             )}
           </div>
         ) : (
-          /* Region subregion grid */
+          /* Region conference grid */
           <div>
             <p className="flex items-center font-mono-display text-[11px] font-bold uppercase tracking-[0.3em] text-white/50">
               <RedBar />
-              {regionData.label}{" // Subregions"}
+              {REGION_TABS.find((r) => r.region === activeRegion)?.label ?? activeRegion.toUpperCase()}
+              {" // Conferences"}
+              {loadingRegion && (
+                <span className="ml-3 text-white/30 animate-pulse normal-case tracking-normal">
+                  loading…
+                </span>
+              )}
             </p>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/[0.06]">
-              {regionData.subregions
-                .filter((sr) => sr.teamCount > 0)
-                .map((sr) => {
-                  const subId = subregionToId(sr.label);
-                  const isExpanded = expandedSubregion === subId;
-                  const srTeams = getSubregionTeams(sr.label);
+            {activeConferences.length > 0 ? (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/[0.06]">
+                {activeConferences.map((conf) => {
+                  const confTeams = getConferenceTeams(conf.id);
+                  const isExpanded = expandedConference === conf.id;
 
                   return (
-                    <div key={sr.id} className="contents">
+                    <div key={conf.id} className="contents">
                       <motion.div
                         whileHover={reduced ? undefined : { scale: 1.005 }}
                         whileTap={reduced ? undefined : { scale: 0.998 }}
-                        onClick={() => handleSubregionClick(subId)}
+                        onClick={() =>
+                          setExpandedConference((prev) =>
+                            prev === conf.id ? null : conf.id,
+                          )
+                        }
                         className={[
                           "relative bg-[#0D0D10] p-5 cursor-pointer transition-colors",
                           isExpanded
@@ -476,79 +491,82 @@ export function PremierLanding() {
                             : "hover:bg-[#121218]",
                         ].join(" ")}
                       >
-                        {/* Red corner accent */}
                         <div
                           className="absolute top-0 right-0 w-[10px] h-[10px] bg-[#FF4655]"
                           style={{ clipPath: "polygon(100% 0,0 0,100% 100%)" }}
                           aria-hidden
                         />
-
                         <div className="flex items-start justify-between gap-2 mb-4">
                           <p className="font-display font-black text-lg text-white leading-tight">
-                            {sr.label}
+                            {conf.name}
                           </p>
                           <span className="font-mono-display text-[11px] text-white/50 shrink-0 mt-0.5">
-                            {srTeams.length} team{srTeams.length !== 1 ? "s" : ""}
+                            {confTeams.length} team{confTeams.length !== 1 ? "s" : ""}
                           </span>
                         </div>
 
-                        <DivisionBar teams={srTeams} />
+                        <DivisionBar entries={confTeams} />
 
                         <div className="mt-4 flex items-center justify-between">
                           <p
                             className={[
                               "font-mono-display text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
-                              isExpanded
-                                ? "text-[#FF4655]"
-                                : "text-white/50 group-hover:text-[#FF4655]",
+                              isExpanded ? "text-[#FF4655]" : "text-white/50",
                             ].join(" ")}
                           >
-                            {isExpanded ? "Hide divisions ↑" : "View divisions →"}
+                            {isExpanded ? "Hide teams ↑" : "View teams →"}
                           </p>
                           <div className="flex gap-1.5">
                             {DIVISION_ORDER.filter((d) =>
-                              srTeams.some((t) => t.division === d)
+                              confTeams.some((t) => t.division === d),
                             ).map((d) => (
                               <span
                                 key={d}
                                 className="size-1.5 rounded-full"
                                 style={{ backgroundColor: DIVISION_COLORS[d] }}
-                                title={d}
+                                title={DIVISION_NAMES[d]}
                               />
                             ))}
                           </div>
                         </div>
                       </motion.div>
 
-                      {/* Expanded teams — full-width row break */}
+                      {/* Expanded teams — full-width row */}
                       <AnimatePresence>
-                        {isExpanded && srTeams.length > 0 && (
+                        {isExpanded && confTeams.length > 0 && (
                           <motion.div
-                            key={`${sr.id}-expanded`}
+                            key={`${conf.id}-expanded`}
                             initial={reduced ? false : { opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={reduced ? undefined : { opacity: 0, height: 0 }}
                             transition={{ duration: 0.25 }}
                             className="col-span-full overflow-hidden bg-[#0D0D10] border-t border-white/[0.06]"
                           >
-                            <TeamsTable teams={srTeams} reduced={reduced} />
+                            <TeamsTable teams={confTeams} reduced={reduced} />
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
                   );
                 })}
-            </div>
-
-            {/* Empty region notice */}
-            {regionData.subregions.filter((sr) => sr.teamCount > 0).length === 0 && (
+              </div>
+            ) : (
+              /* No conferences / leaderboard data */
               <div className="mt-8 py-16 text-center border border-white/[0.06] bg-[#0D0D10]">
-                <p className="font-display font-bold text-lg text-white/40">
-                  No teams tracked yet
-                </p>
-                <p className="mt-2 font-mono-display text-xs tracking-[0.1em] text-white/25">
-                  Data ingestion for this region is pending
-                </p>
+                {loadingRegion ? (
+                  <p className="font-mono-display text-xs tracking-[0.1em] text-white/25 animate-pulse">
+                    Loading…
+                  </p>
+                ) : (
+                  <>
+                    <p className="font-display font-bold text-lg text-white/40">
+                      No teams tracked yet
+                    </p>
+                    <p className="mt-2 font-mono-display text-xs tracking-[0.1em] text-white/25">
+                      Data ingestion for this region is pending
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>

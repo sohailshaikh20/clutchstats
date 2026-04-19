@@ -58,11 +58,16 @@ export function Navbar() {
 
   function onNavSearchSubmit(e: FormEvent) {
     e.preventDefault();
-    const path = playerPathFromSearchInput(navSearchQ);
-    if (path) {
-      router.push(path);
-      setNavSearchQ("");
+    const q = navSearchQ.trim();
+    if (!q) return;
+    const playerPath = playerPathFromSearchInput(q);
+    if (playerPath) {
+      router.push(playerPath);
+    } else {
+      // No Name#Tag format — treat as a Premier team search
+      router.push(`/premier?q=${encodeURIComponent(q)}`);
     }
+    setNavSearchQ("");
   }
 
   useEffect(() => {
