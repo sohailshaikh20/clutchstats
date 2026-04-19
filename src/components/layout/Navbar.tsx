@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   BarChart3,
+  Layers,
   Map,
   Menu,
   Search,
@@ -15,18 +16,22 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
-const navItems = [
+type NavItem = { href: string; label: string; badge?: string };
+
+const navItems: NavItem[] = [
   { href: "/", label: "Home" },
   { href: "/stats", label: "Stats" },
   { href: "/esports", label: "Esports" },
+  { href: "/premier", label: "Premier", badge: "NEW" },
   { href: "/roadmaps", label: "Roadmaps" },
   { href: "/lfg", label: "Find Squad" },
-] as const;
+];
 
 const tabItems = [
   { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/esports", label: "Esports", icon: Trophy },
-  { href: "/roadmaps", label: "Roadmaps", icon: Map },
+  { href: "/premier", label: "Premier", icon: Layers },
+  { href: "/roadmaps", label: "Maps", icon: Map },
   { href: "/lfg", label: "Squad", icon: UsersRound },
 ] as const;
 
@@ -124,8 +129,17 @@ export function Navbar() {
                     reduced ? { duration: 0 } : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
                   }
                 >
-                  <Link href={item.href} className={navLinkClass(active)}>
+                  <Link href={item.href} className={`${navLinkClass(active)} items-center gap-1.5`}>
                     {item.label}
+                    {item.badge ? (
+                      <span
+                        className="font-mono-display text-[8px] font-bold uppercase tracking-[0.15em] bg-[#FF4655] text-white px-1.5 py-px leading-none"
+                        style={{ clipPath: "polygon(2px 0,100% 0,100% calc(100% - 2px),calc(100% - 2px) 100%,0 100%,0 2px)" }}
+                        aria-label="new"
+                      >
+                        {item.badge}
+                      </span>
+                    ) : null}
                   </Link>
                 </motion.div>
               );
@@ -222,13 +236,21 @@ export function Navbar() {
                       <Link
                         href={item.href}
                         className={[
-                          "block rounded-lg px-3 py-3 font-heading text-base font-semibold uppercase tracking-wide",
+                          "flex items-center gap-2 rounded-lg px-3 py-3 font-heading text-base font-semibold uppercase tracking-wide",
                           active
                             ? "bg-surface-light text-white"
                             : "text-white/70 hover:bg-surface-light/60 hover:text-white",
                         ].join(" ")}
                       >
                         {item.label}
+                        {item.badge ? (
+                          <span
+                            className="font-mono-display text-[8px] font-bold uppercase tracking-[0.15em] bg-[#FF4655] text-white px-1.5 py-px leading-none"
+                            style={{ clipPath: "polygon(2px 0,100% 0,100% calc(100% - 2px),calc(100% - 2px) 100%,0 100%,0 2px)" }}
+                          >
+                            {item.badge}
+                          </span>
+                        ) : null}
                       </Link>
                     </motion.div>
                   );

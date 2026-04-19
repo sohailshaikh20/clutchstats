@@ -867,6 +867,35 @@ export default function HomeLanding() {
         </div>
       </section>
 
+      {/* ─── PREMIER TEASE ─── */}
+      <section className="border-y border-white/[0.06] bg-[#0D0D10] py-6">
+        <div className="mx-auto max-w-7xl px-4 md:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="font-display font-black text-2xl text-white leading-none">
+                VALORANT PREMIER
+              </h2>
+              <span
+                className="font-mono-display text-[8px] font-bold uppercase tracking-[0.15em] bg-[#FF4655] text-white px-1.5 py-px leading-none"
+                style={{ clipPath: "polygon(2px 0,100% 0,100% calc(100% - 2px),calc(100% - 2px) 100%,0 100%,0 2px)" }}
+              >
+                NEW
+              </span>
+            </div>
+            <p className="mt-1.5 font-mono-display text-xs tracking-[0.1em] text-white/60">
+              Browse divisions, scout opponents, track your team&apos;s ranking
+            </p>
+          </div>
+          <Link
+            href="/premier"
+            className="shrink-0 bg-[#FF4655] px-5 py-2.5 font-mono-display text-[11px] font-bold uppercase tracking-[0.15em] text-white hover:brightness-110 transition-[filter]"
+            style={{ clipPath: "polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)" }}
+          >
+            Explore Premier →
+          </Link>
+        </div>
+      </section>
+
       {/* ─── CTA ─── */}
       <section className="relative mt-12 overflow-hidden bg-[#0A0A0C] py-24">
         <div
