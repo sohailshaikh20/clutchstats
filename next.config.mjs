@@ -12,6 +12,7 @@ const nextConfig = {
       { protocol: "https", hostname: "img.vlr.gg", pathname: "/**" },
       { protocol: "https", hostname: "i.imgur.com", pathname: "/**" },
       { protocol: "https", hostname: "owcdn.net", pathname: "/**" },
+      { protocol: "https", hostname: "**.owcdn.net", pathname: "/**" },
       { protocol: "https", hostname: "cdn.discordapp.com", pathname: "/**" },
       { protocol: "https", hostname: "static.wikia.nocookie.net", pathname: "/**" },
     ],

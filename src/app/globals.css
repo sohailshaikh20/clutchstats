@@ -146,12 +146,29 @@
   animation: countdown-sec-pulse 1s ease-in-out infinite;
 }
 
+@keyframes esports-live-edge-glow {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(255, 70, 85, 0.85);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 8px rgba(255, 70, 85, 0.45);
+  }
+}
+
+.esports-live-edge-glow {
+  animation: esports-live-edge-glow 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-hero-mesh-a,
   .landing-hero-mesh-b,
   .roadmap-dash-animate,
   .roadmap-node-pulse-ring,
-  .countdown-sec-pulse {
+  .countdown-sec-pulse,
+  .esports-live-edge-glow {
     animation: none !important;
   }
 }

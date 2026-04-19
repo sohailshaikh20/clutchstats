@@ -1,9 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { EventsPanel } from "./EventsPanel";
-import { LiveUpcomingPanel } from "./LiveUpcomingPanel";
+import { LiveUpcomingLoadingSkeleton, LiveUpcomingPanel } from "./LiveUpcomingPanel";
 import { RankingsPanel } from "./RankingsPanel";
 import { ResultsPanel } from "./ResultsPanel";
 import { RoadmapPanel } from "./RoadmapPanel";
@@ -73,7 +73,11 @@ export function EsportsHub() {
               exit={reduced ? undefined : { opacity: 0, x: -10 }}
               transition={reduced ? { duration: 0 } : { duration: 0.22 }}
             >
-              {tab === "live" ? <LiveUpcomingPanel /> : null}
+              {tab === "live" ? (
+                <Suspense fallback={<LiveUpcomingLoadingSkeleton />}>
+                  <LiveUpcomingPanel />
+                </Suspense>
+              ) : null}
               {tab === "results" ? <ResultsPanel /> : null}
               {tab === "rankings" ? <RankingsPanel /> : null}
               {tab === "events" ? <EventsPanel /> : null}
